@@ -11,5 +11,5 @@ type Bill struct {
 	ID          string   `json:"id"`
 	SAPBillID   string   `json:"sap_bill_id"`
 	Description string   `json:"description"`
-	ParentBags  []string `json:"parent_bags"` // List of Parent Bag IDs
+	ParentBags  []string `json:"parent_bags"`
 }

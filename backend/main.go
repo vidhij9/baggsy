@@ -1,52 +1,32 @@
 package main
 
 import (
-	"log"
-	"os"
-
-	"database"
-	"models"
-
-	"./controllers"
+	"baggsy/controllers"
+	"baggsy/database"
 
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	// Load environment variables
-	config.LoadEnv()
+	// Initialize the database
+	database.InitDB()
+	defer database.DB.Close()
 
-	// Connect to the database
-	db := database.ConnectDB()
-	defer func() {
-		sqlDB, err := db.DB()
-		if err != nil {
-			log.Fatalf("Failed to get DB instance: %v", err)
-		}
-		sqlDB.Close()
-	}()
+	// Run migrations to ensure database tables are ready
+	database.RunMigrations()
 
-	// Run migrations
-	database.RunMigrations(db)
-	models.RegisterModels(db)
+	// Set up the router
+	r := gin.Default()
 
-	// Initialize router
-	router := gin.Default()
+	// Bag-related endpoints
+	r.POST("/create-bag", controllers.CreateBag)                    // Create a new bag
+	r.GET("/bags", controllers.GetBagsWithPagination)               // Get paginated list of bags
+	r.POST("/link-bags-to-sap-bill", controllers.LinkBagsToSAPBill) // Link bags to a bill
 
-	// Setup routes
-	routes.SetupRoutes(router)
+	// Bill-related endpoints
+	r.POST("/create-bill", controllers.CreateBill) // Create a new bill and link parent bags
+	r.GET("/bills", controllers.GetBills)          // Retrieve all bills
 
-	router.POST("/create-bag", controllers.CreateBag)
-	router.POST("/link-bags-to-sap-bill", controllers.LinkBagsToSAPBill)
-	router.GET("/bags", controllers.GetBagsWithPagination)
-
-	// Start server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	log.Printf("Starting server on port %s", port)
-	if err := router.Run(":" + port); err != nil {
-		log.Fatalf("Failed to start server: %v", err)
-	}
+	// Start the server
+	r.Run(":8080") // Listen and serve on port 8080
 }
