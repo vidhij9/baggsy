@@ -6,16 +6,15 @@ import (
 	"strconv"
 	"sync"
 
-	"baggsy/models"
+	"baggsy/backend/models"
 
 	"github.com/gin-gonic/gin"
 )
 
 var (
-	bags         = []models.Bag{}
-	bills        = []models.Bill{}
-	distributors = []models.Distributor{}
-	mutex        sync.Mutex // Mutex to prevent race conditions
+	bags  = []models.Bag{}
+	bills = []models.Bill{}
+	mutex sync.Mutex // Mutex to prevent race conditions
 )
 
 // CreateBag handles adding a new bag and optionally linking it to a parent bag
@@ -39,17 +38,17 @@ func CreateBag(c *gin.Context) {
 		}
 	}
 
-	if newBag.ParentBagID != nil {
+	if newBag.ParentBagID != "" {
 		// Validate parent bag exists
 		found := false
 		for _, bag := range bags {
-			if bag.ID == *newBag.ParentBagID {
+			if bag.ID == newBag.ParentBagID {
 				found = true
 				break
 			}
 		}
 		if !found {
-			log.Printf("Parent bag ID not found: %v", *newBag.ParentBagID)
+			log.Printf("Parent bag ID not found: %v", newBag.ParentBagID)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Parent bag ID not found"})
 			return
 		}
@@ -80,13 +79,13 @@ func LinkBagsToSAPBill(c *gin.Context) {
 		found := false
 		for i, bag := range bags {
 			if bag.ID == parentID && bag.BagType == "Parent" {
-				if bag.BillID != nil {
+				if bag.BillID != "" {
 					log.Printf("Parent bag %v is already linked to another SAP bill", parentID)
 					c.JSON(http.StatusConflict, gin.H{"error": "Parent bag already linked to another SAP bill", "parent_bag_id": parentID})
 					return
 				}
 				found = true
-				bags[i].BillID = &linkRequest.SAPBillID // Link bag to the SAP bill
+				bags[i].BillID = linkRequest.SAPBillID // Link bag to the SAP bill
 				break
 			}
 		}

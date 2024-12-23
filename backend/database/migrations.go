@@ -1,34 +1,22 @@
 package database
 
-import (
-	"log"
-	"os",
-	"strings"
-)
+import "log"
 
-func RunMigrations() {
-    // Read the SQL file
-    sqlFile, err := os.ReadFile("database/init.sql")
-    if err != nil {
-        log.Fatalf("Failed to read SQL file: %v", err)
-    }
-
-    // Convert the file content to string and split into individual statements
-    statements := strings.Split(string(sqlFile), ";")
-
-    // Execute each statement
-    for _, statement := range statements {
-        // Skip empty statements
-        if strings.TrimSpace(statement) == "" {
-            continue
-        }
-
-        _, err = DB.Exec(statement)
-        if err != nil {
-            log.Fatalf("Migration failed: %v", err)
-        }
-    }
-    
-    log.Println("Migrations ran successfully.")
+func RunMigrations() error {
+	query := `
+	CREATE TABLE IF NOT EXISTS bags (
+		id SERIAL PRIMARY KEY,
+		qr_code VARCHAR(255) UNIQUE NOT NULL,
+		bag_type VARCHAR(50) NOT NULL,
+		status VARCHAR(50),
+		parent_id VARCHAR(50),
+		bill_id VARCHAR(50)
+	);`
+	_, err := DB.Exec(query)
+	if err != nil {
+		log.Fatalf("Migration failed: %v", err)
+		return err
+	}
+	log.Println("Migrations ran successfully.")
+	return nil
 }
-
