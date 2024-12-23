@@ -1,24 +1,25 @@
-version: '3.8'
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
     ports:
       - "8080:8080"
     environment:
-      DB_HOST: db
+      DB_HOST: localhost
       DB_PORT: 5432
-      DB_USER: user
-      DB_PASSWORD: password
+      DB_USER: baggsy
+      DB_PASSWORD: baggsy
       DB_NAME: baggsy
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
     ports:
       - "3000:3000"
   db:
     image: postgres:13
     environment:
-      POSTGRES_USER: user
-      POSTGRES_PASSWORD: password
+      POSTGRES_USER: baggsy
+      POSTGRES_PASSWORD: baggsy
       POSTGRES_DB: baggsy
     ports:
       - "5432:5432"
