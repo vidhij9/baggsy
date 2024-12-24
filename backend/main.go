@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -28,9 +29,15 @@ func main() {
 	// Set up the router
 	r := gin.Default()
 
-	r.POST("/create-bag", controllers.CreateBag)
-	r.POST("/link-bags-to-sap-bill", controllers.LinkBagsToSAPBill)
-	r.GET("/bags", controllers.GetBagsWithPagination)
+	// Add CORS middleware
+	r.Use(cors.Default())
+
+	r.POST("/create-bag", controllers.RegisterBag)
+	r.POST("/link-bags", controllers.LinkBags)
+	r.POST("/link-bag-to-bill", controllers.LinkBagToBill)
+	r.PUT("/edit-bill-id", controllers.EditBillID)
+	r.GET("/search-bill-by-bag", controllers.SearchBillByBag)
+	r.GET("/search-bags-by-bill", controllers.SearchBagsByBill)
 
 	// Use a configurable port from environment variables
 	port := os.Getenv("SERVER_PORT")
