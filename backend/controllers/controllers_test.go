@@ -13,7 +13,7 @@ import (
 
 func setupRouter() *gin.Engine {
 	router := gin.Default()
-	router.POST("/create-bag", RegisterBag)
+	router.POST("/register-bag", RegisterBag)
 	router.POST("/link-bags", LinkBags)
 	router.POST("/link-bag-to-bill", LinkBagToBill)
 	router.PUT("/edit-bill-id", EditBillID)

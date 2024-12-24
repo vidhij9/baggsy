@@ -32,7 +32,7 @@ func main() {
 	// Add CORS middleware
 	r.Use(cors.Default())
 
-	r.POST("/create-bag", controllers.RegisterBag)
+	r.POST("/register-bag", controllers.RegisterBag)
 	r.POST("/link-bags", controllers.LinkBags)
 	r.POST("/link-bag-to-bill", controllers.LinkBagToBill)
 	r.PUT("/edit-bill-id", controllers.EditBillID)
