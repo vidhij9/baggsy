@@ -1,41 +1,41 @@
 package database
 
 import (
-	"database/sql"
-	"fmt"
 	"log"
 	"time"
 
-	_ "github.com/lib/pq" // Import PostgreSQL driver
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
-var DB *sql.DB
+var DB *gorm.DB
 
-func InitDBWithRetry() {
+func Connect() {
 	var err error
-	connStr := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		// os.Getenv("DB_HOST"),
-		// os.Getenv("DB_PORT"),
-		// os.Getenv("DB_USER"),
-		// os.Getenv("DB_PASSWORD"),
-		// os.Getenv("DB_NAME"),
-		"localhost",
-		"5432",
-		"baggsy",
-		"baggsy",
-		"baggsy",
-	)
 
-	retries := 5
-	for i := 0; i < retries; i++ {
-		DB, err = sql.Open("postgres", connStr)
-		if err == nil && DB.Ping() == nil {
+	// PostgreSQL connection string
+	// Replace the placeholders with your actual credentials
+	dsn := "host=localhost user=baggsy password=baggsy dbname=baggsy port=5432 sslmode=disable TimeZone=Asia/Kolkata"
+
+	retryCount := 5
+	for i := 0; i < retryCount; i++ {
+		DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		if err == nil {
 			log.Println("Database connection established")
 			return
 		}
-		log.Printf("Database connection failed (attempt %d/%d): %v", i+1, retries, err)
-		time.Sleep(2 * time.Second)
+
+		log.Printf("Failed to connect to database. Retrying... (%d/%d)\n", i+1, retryCount)
+		time.Sleep(2 * time.Second) // Wait for 2 seconds before retrying
 	}
 
-	log.Fatalf("Failed to connect to the database after %d attempts: %v", retries, err)
+	log.Fatal("Failed to connect to database after retries:", err)
+}
+
+func Close() error {
+	sqlDB, err := DB.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.Close()
 }

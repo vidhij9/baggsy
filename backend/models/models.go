@@ -1,20 +1,26 @@
 package models
 
-// Bag struct defines the structure of a bag
-// including bill and parent-child relationships
+// Bag model for storing QR code and type
 type Bag struct {
-	ID          string `json:"id"`
-	QRCode      string `json:"qr_code"`
-	BagType     string `json:"bag_type"`
-	Status      string `json:"status"`
-	BillID      string `json:"bill_id"`
-	ParentBagID string `json:"parent_bag_id"`
+	ID      uint   `gorm:"primaryKey"`
+	QRCode  string `gorm:"uniqueIndex;not null"`
+	BagType string `gorm:"not null"` // Can be "Parent" or "Child"
 }
 
-// Bill struct defines the structure of a bill
-// including associated metadata
-type Bill struct {
-	ID          string `json:"id"`
-	SAPBillID   string `json:"sap_bill_id"`
-	Description string `json:"description"`
+// BagMap model for linking parent bags to bill IDs
+type BagMap struct {
+	ID         uint   `gorm:"primaryKey"`
+	ParentBag  string `gorm:"not null"`             // QR Code of parent bag
+	ChildBag   string `gorm:"not null"`             // QR Code of child bag
+	BillID     string `gorm:"not null"`             // Associated bill ID
+	UniqueLink string `gorm:"uniqueIndex;not null"` // Unique combination of ParentBag and ChildBag
+}
+
+// Link model for associating parent and child bags
+type Link struct {
+	ID        uint   `gorm:"primaryKey"`
+	ParentBag string `gorm:"not null"`            // QR Code of the parent bag
+	ChildBag  string `gorm:"not null"`            // QR Code of the child bag
+	BillID    string `gorm:"not null"`            // Bill ID
+	CreatedAt int64  `gorm:"autoCreateTime:nano"` // Timestamp of creation
 }

@@ -7,24 +7,32 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"sync"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
+var mu sync.Mutex // Global mutex for thread-safe operations
+
 func main() {
 	// Initialize the database
-	database.InitDBWithRetry()
+	database.Connect()
+
 	defer func() {
-		if err := database.DB.Close(); err != nil {
+		mu.Lock()
+		defer mu.Unlock()
+		if err := database.Close(); err != nil {
 			log.Fatalf("Error closing the database connection: %v", err)
 		}
 	}()
 
 	// Run migrations
+	mu.Lock()
 	if err := database.RunMigrations(); err != nil {
 		log.Fatalf("Migration execution error: %v", err)
 	}
+	mu.Unlock()
 
 	// Set up the router
 	r := gin.Default()
