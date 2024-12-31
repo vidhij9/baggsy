@@ -16,9 +16,7 @@ func setupRouter() *gin.Engine {
 	router.POST("/register-bag", RegisterBag)
 	router.POST("/link-bags", LinkBags)
 	router.POST("/link-bag-to-bill", LinkBagToBill)
-	router.PUT("/edit-bill-id", EditBillID)
 	router.GET("/search-bill-by-bag", SearchBillByBag)
-	router.GET("/search-bags-by-bill", SearchBagsByBill)
 	return router
 }
 

@@ -43,9 +43,7 @@ func main() {
 	r.POST("/register-bag", controllers.RegisterBag)
 	r.POST("/link-bags", controllers.LinkBags)
 	r.POST("/link-bag-to-bill", controllers.LinkBagToBill)
-	r.PUT("/edit-bill-id", controllers.EditBillID)
 	r.GET("/search-bill-by-bag", controllers.SearchBillByBag)
-	r.GET("/search-bags-by-bill", controllers.SearchBagsByBill)
 
 	// Use a configurable port from environment variables
 	port := os.Getenv("SERVER_PORT")
