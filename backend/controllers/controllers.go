@@ -80,6 +80,7 @@ func RegisterBag(c *gin.Context) {
 		return
 	}
 
+	// Validate and check for duplicates
 	if err := validateBagInput(bag.QRCode, bag.BagType); err != nil {
 		handleError(c, http.StatusBadRequest, err.Error(), nil)
 		return
@@ -90,30 +91,34 @@ func RegisterBag(c *gin.Context) {
 		return
 	}
 
+	// Extract and batch-insert child bags
 	childBagCount, err := extractChildBagCount(bag.QRCode)
 	if err != nil {
 		handleError(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
 
+	childBags := make([]models.Bag, childBagCount)
 	for i := 0; i < childBagCount; i++ {
-		childBag := models.Bag{
+		childBags[i] = models.Bag{
 			QRCode:  fmt.Sprintf("%s-Child-%d", bag.QRCode, i),
 			BagType: "Child",
 		}
-		if err := database.DB.Create(&childBag).Error; err != nil {
-			handleError(c, http.StatusInternalServerError, "Failed to create child bags", err)
-			return
-		}
 	}
 
+	if err := database.DB.Create(&childBags).Error; err != nil {
+		handleError(c, http.StatusInternalServerError, "Failed to batch-insert child bags", err)
+		return
+	}
+
+	// Register the parent bag
 	if err := database.DB.Create(&bag).Error; err != nil {
 		handleError(c, http.StatusInternalServerError, "Failed to register bag", err)
 		return
 	}
 
-	log.Printf("Action: RegisterBag | QRCode: %s | BagType: %s", bag.QRCode, bag.BagType)
-	c.JSON(http.StatusCreated, gin.H{"message": "Bag registered successfully"})
+	log.Printf("Action: RegisterBag | QRCode: %s | BagType: %s | ChildBagCount: %d", bag.QRCode, bag.BagType, childBagCount)
+	c.JSON(http.StatusCreated, gin.H{"message": "Bag registered successfully", "child_bag_count": childBagCount})
 }
 
 // Link parent bag and child bag, removing the child bag from the database
@@ -208,7 +213,6 @@ func LinkBagToBill(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Parent bag linked to bill and soft-deleted successfully"})
 }
 
-// Search for a bill by a child bag's QR Code
 func SearchBillByBag(c *gin.Context) {
 	qrCode := c.Query("qr_code")
 	if qrCode == "" {
@@ -254,4 +258,17 @@ func UnlinkChildBag(c *gin.Context) {
 
 	tx.Commit()
 	c.JSON(http.StatusOK, gin.H{"message": "Child bag unlinked and restored successfully"})
+}
+
+func GetLinkedBags(c *gin.Context) {
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+
+	var bagMaps []models.BagMap
+	if err := database.DB.Offset((page - 1) * limit).Limit(limit).Find(&bagMaps).Error; err != nil {
+		handleError(c, http.StatusInternalServerError, "Failed to retrieve linked bags", err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": bagMaps})
 }
