@@ -260,15 +260,18 @@ func UnlinkChildBag(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Child bag unlinked and restored successfully"})
 }
 
-func GetLinkedBags(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
+func GetLinkedBagsByParent(c *gin.Context) {
+	parentBag := c.Query("parent_bag")
+	if parentBag == "" {
+		handleError(c, http.StatusBadRequest, "Parent Bag QR Code is required", nil)
+		return
+	}
 
-	var bagMaps []models.BagMap
-	if err := database.DB.Offset((page - 1) * limit).Limit(limit).Find(&bagMaps).Error; err != nil {
+	var linkedBags []models.BagMap
+	if err := database.DB.Where("parent_bag = ?", parentBag).Find(&linkedBags).Error; err != nil {
 		handleError(c, http.StatusInternalServerError, "Failed to retrieve linked bags", err)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": bagMaps})
+	c.JSON(http.StatusOK, gin.H{"data": linkedBags})
 }
