@@ -1,0 +1,12 @@
+body {
+  font-family: Arial, sans-serif;
+}
+
+.registration, .linking, .search {
+  margin: 20px 0;
+}
+
+input, select, button {
+  margin: 10px;
+  padding: 8px;
+}

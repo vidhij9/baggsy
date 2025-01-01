@@ -4,17 +4,29 @@ import (
 	"log"
 	"time"
 
+	"github.com/joho/godotenv"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 var DB *gorm.DB
 
+func LoadConfig() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+}
+
 func Connect() {
 	var err error
 
 	// PostgreSQL connection string
 	// Replace the placeholders with your actual credentials
+
+	// dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
+	// 	os.Getenv("DB_HOST"), os.Getenv("DB_USER"), os.Getenv("DB_PASS"),
+	// 	os.Getenv("DB_NAME"), os.Getenv("DB_PORT"))
+
 	dsn := "host=localhost user=baggsy password=baggsy dbname=baggsy port=5432 sslmode=disable TimeZone=Asia/Kolkata"
 
 	retryCount := 5

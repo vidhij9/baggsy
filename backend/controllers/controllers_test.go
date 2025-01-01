@@ -1,4 +1,4 @@
-package controllers
+package controllers_test
 
 import (
 	"bytes"
@@ -7,16 +7,18 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"baggsy/backend/controllers"
+
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
 
 func setupRouter() *gin.Engine {
 	router := gin.Default()
-	router.POST("/register-bag", RegisterBag)
-	router.POST("/link-bags", LinkBags)
-	router.POST("/link-bag-to-bill", LinkBagToBill)
-	router.GET("/search-bill-by-bag", SearchBillByBag)
+	router.POST("/register-bag", controllers.RegisterBag)
+	router.POST("/link-bags", controllers.LinkBags)
+	router.POST("/link-bag-to-bill", controllers.LinkBagToBill)
+	router.GET("/search-bill-by-bag", controllers.SearchBillByBag)
 	return router
 }
 
@@ -99,4 +101,52 @@ func TestSearchBillByBag(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	assert.Contains(t, w.Body.String(), "BILL123")
+}
+func TestUnlinkChildBag(t *testing.T) {
+	router := setupRouter()
+
+	// Register Parent Bag
+	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/create-bag", bytes.NewBuffer([]byte(`{"qr_code":"PARENT123","bag_type":"Parent","status":"Active"}`))))
+
+	// Register Child Bag
+	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/create-bag", bytes.NewBuffer([]byte(`{"qr_code":"CHILD123","bag_type":"Child","status":"Active"}`))))
+
+	// Link Parent and Child
+	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/link-bags", bytes.NewBuffer([]byte(`{"parent_bag_qr_code":"PARENT123","child_bag_qr_code":"CHILD123"}`))))
+
+	// Unlink Child Bag
+	unlinkBody := map[string]string{
+		"parent_bag": "PARENT123",
+		"child_bag":  "CHILD123",
+	}
+	jsonUnlinkBody, _ := json.Marshal(unlinkBody)
+
+	w := httptest.NewRecorder()
+	req, _ := http.NewRequest("POST", "/unlink-child-bag", bytes.NewBuffer(jsonUnlinkBody))
+	req.Header.Set("Content-Type", "application/json")
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "Child bag unlinked and restored successfully")
+}
+
+func TestGetLinkedBagsByParent(t *testing.T) {
+	router := setupRouter()
+
+	// Register Parent Bag
+	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/create-bag", bytes.NewBuffer([]byte(`{"qr_code":"PARENT123","bag_type":"Parent","status":"Active"}`))))
+
+	// Register Child Bag
+	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/create-bag", bytes.NewBuffer([]byte(`{"qr_code":"CHILD123","bag_type":"Child","status":"Active"}`))))
+
+	// Link Parent and Child
+	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/link-bags", bytes.NewBuffer([]byte(`{"parent_bag_qr_code":"PARENT123","child_bag_qr_code":"CHILD123"}`))))
+
+	// Get Linked Bags by Parent
+	req := httptest.NewRequest("GET", "/get-linked-bags-by-parent?parent_bag=PARENT123", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Contains(t, w.Body.String(), "CHILD123")
 }

@@ -27,6 +27,7 @@ CREATE INDEX idx_bags_qr_code ON bags (qr_code);
 CREATE INDEX idx_bag_map_parent_bag ON bag_map (parent_bag);
 CREATE INDEX idx_bag_map_child_bag ON bag_map (child_bag);
 CREATE INDEX idx_links_bill_id ON links (bill_id);
+CREATE INDEX idx_bags_qr_code ON bags (qr_code);
 
 CREATE OR REPLACE FUNCTION soft_delete_bags()
 RETURNS TRIGGER AS $$
