@@ -3,15 +3,15 @@ import BagRegistration from "../components/BagRegistration";
 import ChildBagRegistration from "../components/ChildBagRegistration";
 
 const Dashboard = () => {
-  const [parentBag, setParentBag] = useState(null); // Track the currently registered parent bag
+  const [parentBag, setParentBag] = useState(null);
 
-  // Handler for successful parent bag registration
   const handleParentRegistered = (bag) => {
-    setParentBag(bag); // Transition to Child Bag Registration
+    console.log("Parent Bag Registered:", bag); // Debug log
+    setParentBag(bag); // Update the state
   };
 
-  // Handler for completing child bag registrations
   const handleChildBagsCompleted = () => {
+    console.log("Child Bags Completed"); // Debug log
     setParentBag(null); // Reset to Parent Bag Registration
     alert("All child bags registered successfully!");
   };
@@ -23,10 +23,8 @@ const Dashboard = () => {
 
       {/* Conditional Rendering */}
       {!parentBag ? (
-        // Parent Bag Registration
         <BagRegistration onParentRegistered={handleParentRegistered} />
       ) : (
-        // Child Bag Registration
         <ChildBagRegistration
           parentBag={parentBag}
           onChildBagsCompleted={handleChildBagsCompleted}

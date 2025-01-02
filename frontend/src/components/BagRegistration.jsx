@@ -3,28 +3,26 @@ import { registerBag } from "../api/api";
 
 const BagRegistration = ({ onParentRegistered }) => {
   const [qrCode, setQrCode] = useState("");
-  const [childCount, setChildCount] = useState(0);
   const [message, setMessage] = useState("");
 
+  const decodeChildCountFromQRCode = (qrCode) => {
+    // Assuming the child count is encoded in the last character of the QR code
+    return parseInt(qrCode.slice(-1), 10);
+  };
+
   const handleSubmit = async () => {
-    if (!qrCode || childCount <= 0) {
-      setMessage("QR Code and positive child count are required!");
-      return;
-    }
-
     try {
+      const childCount = decodeChildCountFromQRCode(qrCode);
       const payload = { qrCode, bagType: "Parent", childCount };
+      console.log("Submitting Parent Bag Data:", payload);
+  
       const response = await registerBag(payload);
-
-      // Success Message
-      setMessage(response.data.message);
-
-      // Trigger Parent Registration Callback
-      onParentRegistered(response.data.parentBag);
-
-      // Clear inputs
+  
+      console.log("Parent Bag Response:", response.data);
+  
+      // Trigger the callback with the registered bag details
+      onParentRegistered(response.data.bag); // Pass the `bag` object
       setQrCode("");
-      setChildCount(0);
     } catch (error) {
       console.error("Error during registration:", error.response?.data || error.message);
       setMessage(error.response?.data?.error || "Something went wrong");
@@ -39,13 +37,6 @@ const BagRegistration = ({ onParentRegistered }) => {
         placeholder="QR Code"
         value={qrCode}
         onChange={(e) => setQrCode(e.target.value)}
-        className="w-full p-2 mb-4 border rounded"
-      />
-      <input
-        type="number"
-        placeholder="Number of Child Bags"
-        value={childCount}
-        onChange={(e) => setChildCount(Number(e.target.value))}
         className="w-full p-2 mb-4 border rounded"
       />
       <button

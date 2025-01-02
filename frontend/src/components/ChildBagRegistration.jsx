@@ -6,6 +6,8 @@ const ChildBagRegistration = ({ parentBag, onChildBagsCompleted }) => {
   const [qrCode, setQrCode] = useState("");
   const [message, setMessage] = useState("");
 
+  console.log("Parent Bag for Child Registration:", parentBag); // Debug log
+
   const handleAddChildBag = async () => {
     if (!qrCode) {
       setMessage("Child Bag QR Code is required!");
@@ -16,13 +18,11 @@ const ChildBagRegistration = ({ parentBag, onChildBagsCompleted }) => {
       const payload = { qrCode, bagType: "Child", parentBag: parentBag.qrCode };
       const response = await registerBag(payload);
 
-      // Add the registered child bag to the list
       setChildBags((prev) => [...prev, response.data.childBag]);
       setQrCode("");
 
-      // Check if all child bags are registered
       if (childBags.length + 1 === parentBag.childCount) {
-        onChildBagsCompleted(); // Trigger completion callback
+        onChildBagsCompleted();
       }
     } catch (error) {
       console.error("Error during child bag registration:", error.response?.data || error.message);
@@ -52,5 +52,6 @@ const ChildBagRegistration = ({ parentBag, onChildBagsCompleted }) => {
     </div>
   );
 };
+
 
 export default ChildBagRegistration;
