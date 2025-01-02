@@ -34,12 +34,15 @@ func ExtractChildBagCount(qrCode string) (int, error) {
 }
 
 // Utility to validate bag inputs
-func ValidateBagInput(qrCode, bagType string) error {
+func ValidateBagInput(qrCode, bagType string, childCount int) error {
 	if qrCode == "" || bagType == "" {
 		return errors.New("QR Code and Bag Type are required")
 	}
 	if bagType != "Parent" && bagType != "Child" {
 		return errors.New("bag Type must be 'Parent' or 'Child'")
+	}
+	if bagType == "Parent" && childCount <= 0 {
+		return errors.New("parent bag must specify a positive child count")
 	}
 	return nil
 }

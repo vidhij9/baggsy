@@ -1,53 +1,60 @@
 import React, { useState } from "react";
 import { registerBag } from "../api/api";
 
-const BagRegistration = () => {
+const BagRegistration = ({ onParentRegistered }) => {
   const [qrCode, setQrCode] = useState("");
-  const [bagType, setBagType] = useState("");
+  const [childCount, setChildCount] = useState(0);
   const [message, setMessage] = useState("");
 
-  const handleRegister = async () => {
-    if (!qrCode || !bagType) {
-      setMessage("QR Code and Bag Type are required!");
+  const handleSubmit = async () => {
+    if (!qrCode || childCount <= 0) {
+      setMessage("QR Code and positive child count are required!");
       return;
     }
 
     try {
-      const response = await registerBag({ qr_code: qrCode, bag_type: bagType });
+      const payload = { qrCode, bagType: "Parent", childCount };
+      const response = await registerBag(payload);
+
+      // Success Message
       setMessage(response.data.message);
+
+      // Trigger Parent Registration Callback
+      onParentRegistered(response.data.parentBag);
+
+      // Clear inputs
       setQrCode("");
-      setBagType("");
+      setChildCount(0);
     } catch (error) {
+      console.error("Error during registration:", error.response?.data || error.message);
       setMessage(error.response?.data?.error || "Something went wrong");
     }
   };
 
   return (
-    <div className="bg-lightGreen p-6 rounded-lg shadow-md">
-      <h2 className="text-2xl font-bold text-darkGreen mb-4">Register Bag</h2>
+    <div className="bg-lightGreen p-6 rounded shadow-md">
+      <h2 className="text-2xl font-bold mb-4">Register Parent Bag</h2>
       <input
         type="text"
-        placeholder="Enter QR Code"
+        placeholder="QR Code"
         value={qrCode}
         onChange={(e) => setQrCode(e.target.value)}
-        className="border rounded w-full p-2 mb-4 focus:outline-none focus:ring focus:ring-green"
+        className="w-full p-2 mb-4 border rounded"
       />
-      <select
-        value={bagType}
-        onChange={(e) => setBagType(e.target.value)}
-        className="border rounded w-full p-2 mb-4 focus:outline-none focus:ring focus:ring-green"
-      >
-        <option value="">Select Bag Type</option>
-        <option value="Parent">Parent</option>
-        <option value="Child">Child</option>
-      </select>
+      <input
+        type="number"
+        placeholder="Number of Child Bags"
+        value={childCount}
+        onChange={(e) => setChildCount(Number(e.target.value))}
+        className="w-full p-2 mb-4 border rounded"
+      />
       <button
-        onClick={handleRegister}
-        className="bg-green text-white px-4 py-2 rounded shadow hover:bg-darkGreen transition"
+        onClick={handleSubmit}
+        className="bg-primary text-white py-2 px-4 rounded hover:bg-dark transition-all"
       >
-        Register
+        Submit
       </button>
-      {message && <p className="text-green mt-4">{message}</p>}
+      {message && <p className="text-darkGreen mt-4">{message}</p>}
     </div>
   );
 };

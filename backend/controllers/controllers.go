@@ -4,7 +4,6 @@ import (
 	"baggsy/backend/database"
 	"baggsy/backend/models"
 	"baggsy/backend/utils"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -15,13 +14,13 @@ import (
 // Register a bag and its child bags if applicable
 func RegisterBag(c *gin.Context) {
 	var bag models.Bag
-	if err := c.BindJSON(&bag); err != nil {
+	if err := c.ShouldBindJSON(&bag); err != nil {
 		utils.HandleError(c, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
 	// Validate and check for duplicates
-	if err := utils.ValidateBagInput(bag.QRCode, bag.BagType); err != nil {
+	if err := utils.ValidateBagInput(bag.QRCode, bag.BagType, bag.ChildCount); err != nil {
 		utils.HandleError(c, http.StatusBadRequest, err.Error(), nil)
 		return
 	}
@@ -38,18 +37,18 @@ func RegisterBag(c *gin.Context) {
 		return
 	}
 
-	childBags := make([]models.Bag, childBagCount)
-	for i := 0; i < childBagCount; i++ {
-		childBags[i] = models.Bag{
-			QRCode:  fmt.Sprintf("%s-Child-%d", bag.QRCode, i),
-			BagType: "Child",
-		}
-	}
+	// childBags := make([]models.Bag, childBagCount)
+	// for i := 0; i < childBagCount; i++ {
+	// 	childBags[i] = models.Bag{
+	// 		QRCode:  fmt.Sprintf("%s-Child-%d", bag.QRCode, i),
+	// 		BagType: "Child",
+	// 	}
+	// }
 
-	if err := database.DB.Create(&childBags).Error; err != nil {
-		utils.HandleError(c, http.StatusInternalServerError, "Failed to batch-insert child bags", err)
-		return
-	}
+	// if err := database.DB.Create(&childBags).Error; err != nil {
+	// 	utils.HandleError(c, http.StatusInternalServerError, "Failed to batch-insert child bags", err)
+	// 	return
+	// }
 
 	// Register the parent bag
 	if err := database.DB.Create(&bag).Error; err != nil {
