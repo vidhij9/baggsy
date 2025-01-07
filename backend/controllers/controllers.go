@@ -84,12 +84,12 @@ func RegisterBag(c *gin.Context) {
 
 	// Register the parent bag
 	if err := database.DB.Create(&bag).Error; err != nil {
-		utils.HandleError(c, http.StatusInternalServerError, "Failed to register bag", err)
+		utils.HandleError(c, http.StatusInternalServerError, "Failed to register parent bag", err)
 		return
 	}
 
 	log.Printf("Action: RegisterBag | QRCode: %s | BagType: %s | ChildBagCount: %d", bag.QRCode, bag.BagType, bag.ChildCount)
-	c.JSON(http.StatusCreated, gin.H{"message": "Bag registered successfully", "bag": bag})
+	c.JSON(http.StatusCreated, gin.H{"message": "Parent Bag registered successfully", "bag": bag})
 }
 
 // Link parent bag to a bill and remove the parent bag from the database
