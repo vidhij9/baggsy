@@ -12,15 +12,13 @@ const ParentBagRegistration = ({ onParentRegistered }) => {
     }
 
     try {
-      const payload = { qrCode, bagType: "Parent" }; // Send only QR Code and Bag Type
+      const payload = { qrCode, bagType: "Parent" };
       const response = await registerBag(payload);
 
       setMessage(response.data.message);
-      onParentRegistered(response.data.bag);
-
-      setQrCode(""); // Reset input
+      onParentRegistered(response.data.bag); // Notify parent component
+      setQrCode("");
     } catch (error) {
-      console.error("Error:", error.response?.data || error.message);
       setMessage(error.response?.data?.error || "Something went wrong");
     }
   };

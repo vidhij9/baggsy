@@ -8,19 +8,116 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
 // Register a bag and its child bags if applicable
+// func RegisterBag(c *gin.Context) {
+// 	var bag models.Bag
+// 	var err error
+
+// 	// Parse the JSON input
+// 	if err := c.ShouldBindJSON(&bag); err != nil {
+// 		utils.HandleError(c, http.StatusBadRequest, "Invalid JSON", err)
+// 		return
+// 	}
+
+// 	// Validate input and check for duplicates
+// 	if err := utils.ValidateBagInput(bag.QRCode, bag.BagType, bag.ChildCount); err != nil {
+// 		utils.HandleError(c, http.StatusBadRequest, err.Error(), nil)
+// 		return
+// 	}
+
+// 	if exists := database.DB.Where("qr_code = ?", bag.QRCode).First(&models.Bag{}).Error == nil; exists {
+// 		utils.HandleError(c, http.StatusConflict, "Bag with this QR Code already exists", nil)
+// 		return
+// 	}
+
+// 	// Handle Parent Bag Registration
+// 	if bag.BagType == "Parent" {
+// 		// Extract child count from the QR code
+// 		bag.ChildCount, err = utils.ExtractChildBagCount(bag.QRCode)
+// 		if err != nil {
+// 			utils.HandleError(c, http.StatusBadRequest, err.Error(), nil)
+// 			return
+// 		}
+
+// 		if bag.ChildCount <= 0 {
+// 			utils.HandleError(c, http.StatusBadRequest, "Invalid child count in QR Code", nil)
+// 			return
+// 		}
+
+// 		// Register the parent bag
+// 		if err := database.DB.Create(&bag).Error; err != nil {
+// 			utils.HandleError(c, http.StatusInternalServerError, "Failed to register parent bag", err)
+// 			return
+// 		}
+
+// 		log.Printf("Action: RegisterBag | ParentBag: %s | ChildCount: %d", bag.QRCode, bag.ChildCount)
+// 		c.JSON(http.StatusCreated, gin.H{"message": "Parent Bag registered successfully", "bag": bag})
+// 		return
+// 	}
+
+// 	// Handle Child Bag Registration
+// 	if bag.BagType == "Child" {
+// 		if bag.ParentBag == "" {
+// 			utils.HandleError(c, http.StatusBadRequest, "Child bag must have a parent bag", nil)
+// 			return
+// 		}
+
+// 		// Validate the parent bag
+// 		var parentBag models.Bag
+// 		if err := database.DB.Where("qr_code = ? AND bag_type = 'Parent'", bag.ParentBag).First(&parentBag).Error; err != nil {
+// 			utils.HandleError(c, http.StatusNotFound, "Parent bag not found", err)
+// 			return
+// 		}
+
+// 		// Start a transaction for child bag registration and linking
+// 		tx := database.DB.Begin()
+
+// 		// Save the child bag
+// 		if err := tx.Create(&bag).Error; err != nil {
+// 			tx.Rollback()
+// 			utils.HandleError(c, http.StatusInternalServerError, "Failed to register child bag", err)
+// 			return
+// 		}
+
+// 		// Link the child bag to the parent bag in bag_maps
+// 		bagMap := models.BagMap{
+// 			ParentBag: parentBag.QRCode,
+// 			ChildBag:  bag.QRCode,
+// 		}
+// 		if err := tx.Create(&bagMap).Error; err != nil {
+// 			tx.Rollback()
+// 			utils.HandleError(c, http.StatusInternalServerError, "Failed to link child bag to parent bag", err)
+// 			return
+// 		}
+
+// 		// Commit the transaction
+// 		tx.Commit()
+
+// 		log.Printf("Action: RegisterBag | ParentBag: %s | ChildBag: %s", parentBag.QRCode, bag.QRCode)
+// 		c.JSON(http.StatusCreated, gin.H{
+// 			"message":  "Child bag registered and linked successfully",
+// 			"childBag": bag,
+// 		})
+// 		return
+// 	}
+
+// 	// If BagType is invalid
+// 	utils.HandleError(c, http.StatusBadRequest, "Invalid Bag Type", nil)
+// }
+
 func RegisterBag(c *gin.Context) {
 	var bag models.Bag
 	var err error
+
+	// Parse the JSON input
 	if err := c.ShouldBindJSON(&bag); err != nil {
 		utils.HandleError(c, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
 
-	// Validate and check for duplicates
+	// Validate input and check for duplicates
 	if err := utils.ValidateBagInput(bag.QRCode, bag.BagType, bag.ChildCount); err != nil {
 		utils.HandleError(c, http.StatusBadRequest, err.Error(), nil)
 		return
@@ -31,65 +128,106 @@ func RegisterBag(c *gin.Context) {
 		return
 	}
 
-	// Extract and batch-insert child bags and Check if the bag is a Parent
+	// Handle Parent Bag Registration
 	if bag.BagType == "Parent" {
-		// Extract child count from the QR code
+		// Extract child count from QR code
 		bag.ChildCount, err = utils.ExtractChildBagCount(bag.QRCode)
-		if err != nil {
-			utils.HandleError(c, http.StatusBadRequest, err.Error(), nil)
+		if err != nil || bag.ChildCount <= 0 {
+			utils.HandleError(c, http.StatusBadRequest, "Invalid child count in QR Code", nil)
 			return
 		}
-		if bag.ChildCount <= 0 {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid child count in QR Code"})
+
+		// Save the parent bag
+		if err := database.DB.Create(&bag).Error; err != nil {
+			utils.HandleError(c, http.StatusInternalServerError, "Failed to register parent bag", err)
 			return
 		}
+
+		log.Printf("Action: RegisterBag | ParentBag: %s | ChildCount: %d", bag.QRCode, bag.ChildCount)
+		c.JSON(http.StatusCreated, gin.H{
+			"message": "Parent bag registered successfully",
+			"bag":     bag,
+		})
+		return
 	}
 
-	// Check if it's a child bag
+	// Handle Child Bag Registration
 	if bag.BagType == "Child" {
+		// Ensure parent bag QR code is provided
 		if bag.ParentBag == "" {
-			c.JSON(http.StatusBadRequest, gin.H{"error": "Child bag must have a parent bag"})
+			utils.HandleError(c, http.StatusBadRequest, "Child bag must have a parent bag", nil)
 			return
 		}
 
-		// Check if the parent bag exists
+		// Validate the parent bag
 		var parentBag models.Bag
-		if err := database.DB.Where("qr_code = ?", bag.ParentBag).First(&parentBag).Error; err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Parent bag not found"})
+		if err := database.DB.Where("qr_code = ? AND bag_type = 'Parent'", bag.ParentBag).First(&parentBag).Error; err != nil {
+			utils.HandleError(c, http.StatusNotFound, "Parent bag not found", err)
 			return
 		}
 
 		// Save the child bag
 		if err := database.DB.Create(&bag).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to register child bag"})
+			utils.HandleError(c, http.StatusInternalServerError, "Failed to register child bag", err)
 			return
 		}
 
-		// Create the mapping in bag_maps
-		bagMap := models.BagMap{
-			ParentBag: parentBag.QRCode,
-			ChildBag:  bag.QRCode,
-		}
-		if err := database.DB.Create(&bagMap).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create bag mapping"})
-			return
-		}
-
+		log.Printf("Action: RegisterBag | ParentBag: %s | ChildBag: %s", bag.ParentBag, bag.QRCode)
 		c.JSON(http.StatusCreated, gin.H{
-			"message":  "Child bag registered and linked successfully",
-			"childBag": bag,
+			"message": "Child bag registered successfully",
+			"childBag": gin.H{
+				"qrCode":    bag.QRCode,
+				"parentBag": bag.ParentBag,
+			},
 		})
 		return
 	}
 
-	// Register the parent bag
-	if err := database.DB.Create(&bag).Error; err != nil {
-		utils.HandleError(c, http.StatusInternalServerError, "Failed to register parent bag", err)
+	// If BagType is invalid
+	utils.HandleError(c, http.StatusBadRequest, "Invalid Bag Type", nil)
+}
+
+func LinkChildBagToParent(c *gin.Context) {
+	var request struct {
+		ParentBag string `json:"parentBag" binding:"required"`
+		ChildBag  string `json:"childBag" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		utils.HandleError(c, http.StatusBadRequest, "Invalid input", err)
 		return
 	}
 
-	log.Printf("Action: RegisterBag | QRCode: %s | BagType: %s | ChildBagCount: %d", bag.QRCode, bag.BagType, bag.ChildCount)
-	c.JSON(http.StatusCreated, gin.H{"message": "Parent Bag registered successfully", "bag": bag})
+	// Ensure the parent bag exists
+	var parentBag models.Bag
+	if err := database.DB.Where("qr_code = ? AND bag_type = 'Parent'", request.ParentBag).First(&parentBag).Error; err != nil {
+		utils.HandleError(c, http.StatusNotFound, "Parent bag not found", err)
+		return
+	}
+
+	// Save the child bag in the database
+	childBag := models.Bag{
+		QRCode:  request.ChildBag,
+		BagType: "Child",
+	}
+	if err := database.DB.Create(&childBag).Error; err != nil {
+		utils.HandleError(c, http.StatusInternalServerError, "Failed to register child bag", err)
+		return
+	}
+
+	// Link the child bag to the parent bag in bag_maps
+	bagMap := models.BagMap{
+		ParentBag: parentBag.QRCode,
+		ChildBag:  childBag.QRCode,
+	}
+	if err := database.DB.Create(&bagMap).Error; err != nil {
+		utils.HandleError(c, http.StatusInternalServerError, "Failed to link child bag to parent bag", err)
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "Child bag linked to parent bag successfully",
+	})
 }
 
 // Link parent bag to a bill and remove the parent bag from the database
@@ -115,6 +253,13 @@ func LinkBagToBill(c *gin.Context) {
 		return
 	}
 
+	// Check if the parent bag is already linked
+	if parentBag.Linked {
+		utils.HandleError(c, http.StatusBadRequest, "This parent bag is already linked to a bill", nil)
+		tx.Rollback()
+		return
+	}
+
 	// Link the parent bag to the bill
 	if err := tx.Create(&link).Error; err != nil {
 		utils.HandleError(c, http.StatusInternalServerError, "Failed to link parent bag to bill", err)
@@ -122,16 +267,16 @@ func LinkBagToBill(c *gin.Context) {
 		return
 	}
 
-	// Soft delete the parent bag
-	if err := tx.Model(&models.Bag{}).Where("qr_code = ?", link.ParentBag).Update("deleted_at", gorm.Expr("NOW()")).Error; err != nil {
-		utils.HandleError(c, http.StatusInternalServerError, "Failed to soft delete parent bag", err)
+	// Mark the parent bag as linked
+	if err := tx.Model(&models.Bag{}).Where("qr_code = ?", link.ParentBag).Update("linked", true).Error; err != nil {
+		utils.HandleError(c, http.StatusInternalServerError, "Failed to mark parent bag as linked", err)
 		tx.Rollback()
 		return
 	}
 
 	tx.Commit()
 	log.Printf("Action: LinkBagToBill | ParentBag: %s | BillID: %s", link.ParentBag, link.BillID)
-	c.JSON(http.StatusOK, gin.H{"message": "Parent bag linked to bill and soft-deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Parent bag linked to bill successfully"})
 }
 
 func SearchBillByBag(c *gin.Context) {

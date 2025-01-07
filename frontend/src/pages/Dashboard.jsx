@@ -3,15 +3,19 @@ import ParentBagRegistration from "../components/ParentBagRegistration";
 import ChildBagRegistration from "../components/ChildBagRegistration";
 
 const Dashboard = () => {
-  const [parentBag, setParentBag] = useState(null);
+  const [parentBag, setParentBag] = useState(null); // Stores the registered parent bag details
 
+  // Triggered when a parent bag is successfully registered
   const handleParentRegistered = (bag) => {
-    setParentBag(bag); // Transition to Child Bag Registration
+    console.log("Parent Bag Registered:", bag); // Debug log
+    setParentBag(bag); // Move to the Child Bag Registration flow
   };
 
+  // Triggered when all child bags are successfully linked
   const handleChildBagsCompleted = () => {
-    setParentBag(null); // Reset back to Parent Bag Registration
-    alert("All child bags registered successfully!");
+    console.log("All Child Bags Linked!"); // Debug log
+    setParentBag(null); // Reset to allow new parent bag registration
+    alert("All child bags linked successfully!");
   };
 
   return (
@@ -23,6 +27,7 @@ const Dashboard = () => {
         Manage your bags and bills efficiently.
       </p>
 
+      {/* Conditional Rendering: Switch between Parent Bag Registration and Child Bag Linking */}
       {!parentBag ? (
         <ParentBagRegistration onParentRegistered={handleParentRegistered} />
       ) : (

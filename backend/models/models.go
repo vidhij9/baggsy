@@ -6,10 +6,12 @@ import (
 
 type Bag struct {
 	ID         uint           `gorm:"primaryKey"`
-	QRCode     string         `gorm:"uniqueIndex;not null" json:"qrCode" binding:"required"`
-	BagType    string         `gorm:"not null" json:"bagType" binding:"required"` // "Parent" or "Child"
-	ChildCount int            `json:"childCount,omitempty"`                       // Optional: Only for Parent bags
-	DeletedAt  gorm.DeletedAt `gorm:"index"`
+	QRCode     string         `gorm:"uniqueIndex;not null"` // Unique QR Code for the bag
+	BagType    string         `gorm:"not null"`             // "Parent" or "Child"
+	ChildCount int            `gorm:"default:0"`            // Number of child bags for parent bags
+	Linked     bool           `gorm:"default:false"`        // Indicates if the bag is linked to a bill
+	ParentBag  string         `gorm:"default:null"`         // QR Code of the parent bag for child bags
+	DeletedAt  gorm.DeletedAt `gorm:"index"`                // For soft delete functionality
 }
 
 type BagMap struct {

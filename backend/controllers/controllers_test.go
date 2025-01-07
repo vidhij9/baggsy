@@ -16,6 +16,7 @@ import (
 func setupRouter() *gin.Engine {
 	router := gin.Default()
 	router.POST("/register-bag", controllers.RegisterBag)
+	router.POST("/link-child-bag", controllers.LinkChildBagToParent)
 	router.POST("/link-bag-to-bill", controllers.LinkBagToBill)
 	router.GET("/search-bill-by-bag", controllers.SearchBillByBag)
 	return router

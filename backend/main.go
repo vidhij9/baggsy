@@ -41,6 +41,7 @@ func main() {
 	r.Use(cors.Default())
 
 	r.POST("/register-bag", controllers.RegisterBag)
+	r.POST("/link-child-bag", controllers.LinkChildBagToParent)
 	r.POST("/link-bag-to-bill", controllers.LinkBagToBill)
 	r.GET("/search-bill-by-bag", controllers.SearchBillByBag)
 	r.GET("/linked-bags", controllers.GetLinkedBagsByParent)
