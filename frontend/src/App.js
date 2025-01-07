@@ -1,7 +1,7 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
-import BagRegistration from "./components/BagRegistration";
+import ParentBagRegistration from "./components/ParentBagRegistration";
 // import ChildBagRegistration from "./components/ChildBagRegistration";
 import LinkBags from "./pages/BagLinking";
 import SearchBill from "./pages/SearchBill";
@@ -14,7 +14,7 @@ const App = () => {
         <div className="flex-grow">
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/register" element={<BagRegistration />} />
+            <Route path="/register" element={<ParentBagRegistration />} />
             <Route path="/link-bags" element={<LinkBags />} />
             <Route path="/search-bill" element={<SearchBill />} />
           </Routes>

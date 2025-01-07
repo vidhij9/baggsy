@@ -1,10 +1,7 @@
 package utils
 
 import (
-	"baggsy/backend/database"
-	"baggsy/backend/models"
 	"errors"
-	"fmt"
 	"log"
 	"strconv"
 	"strings"
@@ -41,9 +38,6 @@ func ValidateBagInput(qrCode, bagType string, childCount int) error {
 	if bagType != "Parent" && bagType != "Child" {
 		return errors.New("bag Type must be 'Parent' or 'Child'")
 	}
-	if bagType == "Parent" && childCount <= 0 {
-		return errors.New("parent bag must specify a positive child count")
-	}
 	return nil
 }
 
@@ -55,21 +49,21 @@ func HandleError(c *gin.Context, statusCode int, message string, err error) {
 	c.JSON(statusCode, gin.H{"error": message})
 }
 
-// Helper to validate child-parent relationships
-func ValidateChildParentRelationship(parentBagQR string, childBagQR string) error {
-	var bagMap models.BagMap
-	if err := database.DB.Where("parent_bag = ? AND child_bag = ?", parentBagQR, childBagQR).First(&bagMap).Error; err == nil {
-		return errors.New("child bag already linked to this parent bag")
-	}
-	return nil
-}
+// // Helper to validate child-parent relationships
+// func ValidateChildParentRelationship(parentBagQR string, childBagQR string) error {
+// 	var bagMap models.BagMap
+// 	if err := database.DB.Where("parent_bag = ? AND child_bag = ?", parentBagQR, childBagQR).First(&bagMap).Error; err == nil {
+// 		return errors.New("child bag already linked to this parent bag")
+// 	}
+// 	return nil
+// }
 
-// Helper to validate maximum child bag count
-func ValidateChildBagCount(parentBag string, maxCount int) error {
-	var count int64
-	database.DB.Model(&models.BagMap{}).Where("parent_bag = ?", parentBag).Count(&count)
-	if int(count) >= maxCount {
-		return fmt.Errorf("parent bag already has the maximum number of child bags (%d)", maxCount)
-	}
-	return nil
-}
+// // Helper to validate maximum child bag count
+// func ValidateChildBagCount(parentBag string, maxCount int) error {
+// 	var count int64
+// 	database.DB.Model(&models.BagMap{}).Where("parent_bag = ?", parentBag).Count(&count)
+// 	if int(count) >= maxCount {
+// 		return fmt.Errorf("parent bag already has the maximum number of child bags (%d)", maxCount)
+// 	}
+// 	return nil
+// }

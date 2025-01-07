@@ -2,8 +2,9 @@
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
 
-/* Custom styles */
 body {
   font-family: 'Roboto', sans-serif;
-  background-color: #f9f9f9;
+  background: linear-gradient(to bottom, #f9f9f9, #e8f5e9);
+  margin: 0;
+  padding: 0;
 }
