@@ -14,4 +14,4 @@ export const registerBag = (data) => API.post("/register-bag", data);
 
 // Link a child bag to a parent
 export const linkChildBag = (data) => API.post("/link-child-bag", data);
-export const linkBags = (data) => API.post("/link-bags", data);
+export const linkBagToBill = (data) => API.post("/link-bag-to-bill", data);

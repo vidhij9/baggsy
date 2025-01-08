@@ -14,7 +14,7 @@ const BottomNav = () => {
           <AiOutlineAppstoreAdd size={24} />
           <span className="text-sm">Register</span>
         </Link>
-        <Link to="/link-bags" className="text-primary flex flex-col items-center hover:text-accent transition">
+        <Link to="/link-bag-to-bill" className="text-primary flex flex-col items-center hover:text-accent transition">
           <AiOutlineLink size={24} />
           <span className="text-sm">Link</span>
         </Link>
