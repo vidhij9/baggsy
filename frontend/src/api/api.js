@@ -7,7 +7,11 @@ const API = axios.create({
   },
 });
 
+export const searchBill = (qrCode) => API.get(`/search-bill?qr_code=${qrCode}`);
+
+// Register a bag: parent or child
 export const registerBag = (data) => API.post("/register-bag", data);
+
+// Link a child bag to a parent
 export const linkChildBag = (data) => API.post("/link-child-bag", data);
 export const linkBags = (data) => API.post("/link-bags", data);
-export const searchBill = (qrCode) => API.get(`/search-bill?qr_code=${qrCode}`);

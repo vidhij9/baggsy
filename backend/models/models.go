@@ -14,6 +14,11 @@ type Bag struct {
 	DeletedAt  gorm.DeletedAt `gorm:"index"`                // For soft delete functionality
 }
 
+type BagRequest struct {
+	ParentBag string `json:"parentBag" binding:"required"` // Ensure this matches the JSON payload
+	ChildBag  string `json:"childBag" binding:"required"`  // Ensure this matches the JSON payload
+}
+
 type BagMap struct {
 	ID        uint   `gorm:"primaryKey"`
 	ParentBag string `gorm:"not null"`

@@ -188,52 +188,54 @@ func RegisterBag(c *gin.Context) {
 }
 
 func LinkChildBagToParent(c *gin.Context) {
-	var request struct {
-		ParentBag string `json:"parentBag" binding:"required"`
-		ChildBag  string `json:"childBag" binding:"required"`
-	}
+	var bagRequest models.BagRequest
+	var bag models.Bag
 
-	if err := c.ShouldBindJSON(&request); err != nil {
+	// Parse and validate JSON payload
+	if err := c.ShouldBindJSON(&bagRequest); err != nil {
 		utils.HandleError(c, http.StatusBadRequest, "Invalid input", err)
 		return
 	}
 
+	log.Printf("Parsed Request: ParentBag=%s, ChildBag=%s", bagRequest.ParentBag, bagRequest.ChildBag)
+
 	// Ensure the parent bag exists
 	var parentBag models.Bag
-	if err := database.DB.Where("qr_code = ? AND bag_type = 'Parent'", request.ParentBag).First(&parentBag).Error; err != nil {
+	if err := database.DB.Where("qr_code = ? AND bag_type = 'Parent'", bagRequest.ParentBag).First(&parentBag).Error; err != nil {
 		utils.HandleError(c, http.StatusNotFound, "Parent bag not found", err)
+		return
+	}
+
+	// Validate child count
+	var linkedChildCount int64
+	database.DB.Model(bag).Where("parent_bag = ?", parentBag.QRCode).Count(&linkedChildCount)
+
+	if int(linkedChildCount) >= parentBag.ChildCount {
+		utils.HandleError(c, http.StatusBadRequest, "Child bag limit exceeded for this parent bag", nil)
 		return
 	}
 
 	// Save the child bag in the database
 	childBag := models.Bag{
-		QRCode:  request.ChildBag,
-		BagType: "Child",
+		QRCode:    bagRequest.ChildBag,
+		BagType:   "Child",
+		ParentBag: parentBag.QRCode,
 	}
 	if err := database.DB.Create(&childBag).Error; err != nil {
 		utils.HandleError(c, http.StatusInternalServerError, "Failed to register child bag", err)
 		return
 	}
 
-	// Link the child bag to the parent bag in bag_maps
-	bagMap := models.BagMap{
-		ParentBag: parentBag.QRCode,
-		ChildBag:  childBag.QRCode,
-	}
-	if err := database.DB.Create(&bagMap).Error; err != nil {
-		utils.HandleError(c, http.StatusInternalServerError, "Failed to link child bag to parent bag", err)
-		return
-	}
-
 	c.JSON(http.StatusCreated, gin.H{
-		"message": "Child bag linked to parent bag successfully",
+		"message":          "Child bag linked to parent bag successfully",
+		"linkedChildCount": linkedChildCount + 1,
 	})
 }
 
 // Link parent bag to a bill and remove the parent bag from the database
 func LinkBagToBill(c *gin.Context) {
 	var link models.Link
-	if err := c.BindJSON(&link); err != nil {
+	if err := c.ShouldBindJSON(&link); err != nil {
 		utils.HandleError(c, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}
@@ -300,7 +302,7 @@ func SearchBillByBag(c *gin.Context) {
 
 func UnlinkChildBag(c *gin.Context) {
 	var link models.BagMap
-	if err := c.BindJSON(&link); err != nil {
+	if err := c.ShouldBindJSON(&link); err != nil {
 		utils.HandleError(c, http.StatusBadRequest, "Invalid JSON", err)
 		return
 	}

@@ -5,6 +5,7 @@ CREATE TABLE bags (
     bag_type VARCHAR(50) NOT NULL, -- "Parent" or "Child"
     child_count INT DEFAULT 0, -- Number of child bags for parent bags
     linked BOOLEAN DEFAULT FALSE, -- Indicates if the parent bag is linked to a bill
+    parent_bag VARCHAR(255),
     deleted_at TIMESTAMP DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -34,6 +35,7 @@ CREATE INDEX idx_bags_linked ON bags (linked); -- Index for the "linked" field
 CREATE INDEX idx_bag_map_parent_bag ON bag_map (parent_bag);
 CREATE INDEX idx_bag_map_child_bag ON bag_map (child_bag);
 CREATE INDEX idx_links_bill_id ON links (bill_id);
+CREATE INDEX idx_parent_bag ON bags (parent_bag);
 
 -- Soft delete function for the bags table
 CREATE OR REPLACE FUNCTION soft_delete_bags()
