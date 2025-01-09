@@ -221,17 +221,6 @@ func LinkBagToBill(c *gin.Context) {
 		return
 	}
 
-	// (Optional) Soft-delete the parent bag if you want it hidden from future queries.
-	// If you do not want to remove it from DB, comment this out.
-	/*
-	   if err := tx.Delete(&parentBag).Error; err != nil {
-	       utils.HandleError(c, http.StatusInternalServerError,
-	           "Failed to soft-delete the parent bag", err)
-	       tx.Rollback()
-	       return
-	   }
-	*/
-
 	// Commit the transaction
 	if err := tx.Commit().Error; err != nil {
 		utils.HandleError(c, http.StatusInternalServerError,

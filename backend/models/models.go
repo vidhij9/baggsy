@@ -30,5 +30,5 @@ type Link struct {
 	ID        uint   `gorm:"primaryKey"`
 	ParentBag string `gorm:"not null"`
 	BillID    string `gorm:"not null"`
-	CreatedAt string `gorm:"default:current_timestamp"`
+	CreatedAt string `gorm:"default:CURRENT_TIMESTAMP"`
 }

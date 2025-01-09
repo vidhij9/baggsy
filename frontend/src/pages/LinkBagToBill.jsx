@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
+import { linkBagToBill } from "../api/api";
 
 const LinkBagToBill = () => {
   const [parentQRCode, setParentQRCode] = useState("");
@@ -20,7 +20,11 @@ const LinkBagToBill = () => {
       };
 
       // Make POST request to our backend
-      const response = await axios.post("/link-bag-to-bill", payload);
+      console.log("Sending payload:", payload);
+
+      const response = await linkBagToBill(payload);
+      console.log("Parent Bag Linking Response:", response.data);
+      
       // On success, server typically returns { message: "...", ... }
       setMessage(response.data.message);
 
