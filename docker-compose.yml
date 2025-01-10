@@ -1,25 +1,37 @@
 services:
-  backend:
-    build:
-      context: ./backend
-    ports:
-      - "8080:8080"
-    environment:
-      DB_HOST: localhost
-      DB_PORT: 5432
-      DB_USER: baggsy
-      DB_PASSWORD: baggsy
-      DB_NAME: baggsy
-  frontend:
-    build:
-      context: ./frontend
-    ports:
-      - "3000:3000"
-  db:
-    image: postgres:13
+  baggsy-db:
+    image: postgres:15
+    container_name: baggsy-db
     environment:
       POSTGRES_USER: baggsy
       POSTGRES_PASSWORD: baggsy
-      POSTGRES_DB: baggsy
+      POSTGRES_DB: baggsy_db
     ports:
       - "5432:5432"
+
+  baggsy-api:
+    container_name: baggsy-api
+    build:
+      context: ./backend     # IMPORTANT: point to the backend folder
+      dockerfile: Dockerfile # Dockerfile is inside that folder
+    depends_on:
+      - baggsy-db
+    environment:
+      DB_HOST: baggsy-db
+      DB_PORT: "5432"
+      DB_USER: baggsy
+      DB_PASSWORD: baggsy
+      DB_NAME: baggsy
+      PORT: "8080"
+    ports:
+      - "8080:8080"
+
+  baggsy-react:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: baggsy-react
+    ports:
+      - "3000:80"
+    depends_on:
+      - baggsy-api

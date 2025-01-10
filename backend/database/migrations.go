@@ -9,7 +9,7 @@ func RunMigrations() error {
 	log.Println("Starting database migrations...")
 
 	// AutoMigrate ensures the schema is created or updated
-	if err := DB.AutoMigrate(&models.Bag{}, &models.BagMap{}, &models.Link{}); err != nil {
+	if err := DB.AutoMigrate(&models.Bag{}, &models.Link{}); err != nil {
 		log.Printf("Error during AutoMigrate: %v", err)
 		return err
 	}

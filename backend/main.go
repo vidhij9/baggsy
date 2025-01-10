@@ -1,14 +1,17 @@
-// Main application entry point
 package main
 
 import (
-	"baggsy/backend/controllers"
-	"baggsy/backend/database"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"sync"
+	"time"
 
+	"baggsy/backend/controllers"
+	"baggsy/backend/database"
+
+	"github.com/Depado/ginprom"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
@@ -34,17 +37,33 @@ func main() {
 	}
 	mu.Unlock()
 
-	// Set up the router
+	// Set up the GIN router
 	r := gin.Default()
+
+	// Create a ginprom Prometheus middleware
+	gp := ginprom.New(
+		ginprom.Engine(r),
+		ginprom.Subsystem("baggsy"),
+		ginprom.Path("/metrics"),
+	)
+
+	// Attach the middleware
+	r.Use(gp.Instrument())
+
+	r.GET("/ping", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"message": "pong"})
+	})
 
 	// Add CORS middleware
 	r.Use(cors.Default())
 
+	// Optional: Rate-limit middleware (example with a simple token bucket).
+	r.Use(rateLimitMiddleware(100)) // e.g. 100 requests/second per instance
+
 	r.POST("/register-bag", controllers.RegisterBag)
-	r.POST("/link-child-bag", controllers.LinkChildBagToParent)
+	r.POST("/link-child-bag", controllers.LinkChildBag)
 	r.POST("/link-bag-to-bill", controllers.LinkBagToBill)
-	r.GET("/search-bill", controllers.SearchBill)
-	r.GET("/linked-bags", controllers.GetLinkedBagsByParent)
+	r.GET("/search-bill", controllers.SearchBag)
 
 	// Use a configurable port from environment variables
 	port := os.Getenv("SERVER_PORT")
@@ -71,4 +90,31 @@ func isValidPort(port string) bool {
 		return false
 	}
 	return portInt >= minPort && portInt <= maxPort
+}
+
+// Example rate-limit middleware (very simplistic):
+func rateLimitMiddleware(rps int) gin.HandlerFunc {
+	// In production, you might use a more robust library or Redis-based approach
+	bucket := make(chan struct{}, rps)
+
+	// Fill the bucket
+	go func() {
+		ticker := time.NewTicker(time.Second)
+		for {
+			<-ticker.C
+			for i := 0; i < rps-len(bucket); i++ {
+				bucket <- struct{}{}
+			}
+		}
+	}()
+
+	return func(c *gin.Context) {
+		select {
+		case <-bucket:
+			c.Next()
+		default:
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "Too Many Requests"})
+			return
+		}
+	}
 }

@@ -5,7 +5,7 @@ const Navbar = () => {
   return (
     <nav className="bg-primary text-white px-6 py-4 shadow-lg">
       <div className="container mx-auto flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Star Agriseeds Pvt Ltd</h1>
+        <h1 className="text-2xl font-bold">Baggsy</h1>
         <ul className="flex space-x-6">
           <li>
             <Link to="/" className="hover:text-secondary transition-all duration-300">

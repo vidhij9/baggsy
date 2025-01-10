@@ -8,7 +8,7 @@ const ChildBagRegistration = ({ parentBag, onChildBagsCompleted }) => {
 
   useEffect(() => {
     console.log("ChildBagRegistration loaded. ParentBag:", parentBag);
-    console.log("ChildCount: ", parentBag.ChildCount)
+    console.log("ChildCount: ", parentBag.ChildCount || 0)
     console.log("LinkedCount: ", linkedCount)
   }, [parentBag]);
 
@@ -18,7 +18,7 @@ const ChildBagRegistration = ({ parentBag, onChildBagsCompleted }) => {
       return;
     }
 
-    if (linkedCount >= parentBag.childCount) {
+    if (linkedCount >= parentBag.ChildCount) {
       setMessage("Child bag limit already reached!");
       onChildBagsCompleted(); // Redirect to parent bag registration
       return;
@@ -55,7 +55,7 @@ const ChildBagRegistration = ({ parentBag, onChildBagsCompleted }) => {
       <h2 className="text-2xl font-bold text-primary mb-4">Register Child Bags</h2>
       <p className="text-gray-600 mb-2">
         Parent Bag: {parentBag.QRCode} &nbsp;|&nbsp; 
-        Allowed: {parentBag.ChildCount || 0}
+        Allowed: {parentBag.ChildCount || 0} 
       </p>
       <p className="text-gray-600 mb-4">
         Remaining: {Math.max(0, parentBag.ChildCount - linkedCount)}

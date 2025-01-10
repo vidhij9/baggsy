@@ -4,7 +4,6 @@ import (
 	"baggsy/backend/database"
 	"baggsy/backend/models"
 	"baggsy/backend/utils"
-	"errors"
 	"log"
 	"net/http"
 
@@ -93,55 +92,55 @@ func RegisterBag(c *gin.Context) {
 	utils.HandleError(c, http.StatusBadRequest, "Invalid Bag Type", nil)
 }
 
-func LinkChildBagToParent(c *gin.Context) {
-	var bagRequest models.BagRequest
-	var bag models.Bag
+// func LinkChildBagToParent(c *gin.Context) {
+// 	var bagRequest models.BagRequest
+// 	var bag models.Bag
 
-	// Parse and validate JSON payload
-	if err := c.ShouldBindJSON(&bagRequest); err != nil {
-		utils.HandleError(c, http.StatusBadRequest, "Invalid input", err)
-		return
-	}
+// 	// Parse and validate JSON payload
+// 	if err := c.ShouldBindJSON(&bagRequest); err != nil {
+// 		utils.HandleError(c, http.StatusBadRequest, "Invalid input", err)
+// 		return
+// 	}
 
-	log.Printf("Parsed Request: ParentBag=%s, ChildBag=%s", bagRequest.ParentBag, bagRequest.ChildBag)
+// 	log.Printf("Parsed Request: ParentBag=%s, ChildBag=%s", bagRequest.ParentBag, bagRequest.ChildBag)
 
-	// Ensure the parent bag exists
-	var parentBag models.Bag
-	if err := database.DB.Where("qr_code = ? AND bag_type = 'Parent'", bagRequest.ParentBag).First(&parentBag).Error; err != nil {
-		utils.HandleError(c, http.StatusNotFound, "Parent bag not found", err)
-		return
-	}
+// 	// Ensure the parent bag exists
+// 	var parentBag models.Bag
+// 	if err := database.DB.Where("qr_code = ? AND bag_type = 'Parent'", bagRequest.ParentBag).First(&parentBag).Error; err != nil {
+// 		utils.HandleError(c, http.StatusNotFound, "Parent bag not found", err)
+// 		return
+// 	}
 
-	// Validate child count
-	var linkedChildCount int64
-	database.DB.Model(bag).Where("parent_bag = ?", parentBag.QRCode).Count(&linkedChildCount)
+// 	// Validate child count
+// 	var linkedChildCount int64
+// 	database.DB.Model(bag).Where("parent_bag = ?", parentBag.QRCode).Count(&linkedChildCount)
 
-	if int(linkedChildCount) >= parentBag.ChildCount {
-		utils.HandleError(c, http.StatusBadRequest, "Child bag limit exceeded for this parent bag", nil)
-		return
-	}
+// 	if int(linkedChildCount) >= parentBag.ChildCount {
+// 		utils.HandleError(c, http.StatusBadRequest, "Child bag limit exceeded for this parent bag", nil)
+// 		return
+// 	}
 
-	// Save the child bag in the database
-	childBag := models.Bag{
-		QRCode:    bagRequest.ChildBag,
-		BagType:   "Child",
-		ParentBag: parentBag.QRCode,
-	}
-	if err := database.DB.Create(&childBag).Error; err != nil {
-		utils.HandleError(c, http.StatusInternalServerError, "Failed to register child bag", err)
-		return
-	}
+// 	// Save the child bag in the database
+// 	childBag := models.Bag{
+// 		QRCode:    bagRequest.ChildBag,
+// 		BagType:   "Child",
+// 		ParentBag: parentBag.QRCode,
+// 	}
+// 	if err := database.DB.Create(&childBag).Error; err != nil {
+// 		utils.HandleError(c, http.StatusInternalServerError, "Failed to register child bag", err)
+// 		return
+// 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"message":          "Child bag linked to parent bag successfully",
-		"linkedChildCount": linkedChildCount + 1,
-	})
-}
+// 	c.JSON(http.StatusCreated, gin.H{
+// 		"message":          "Child bag linked to parent bag successfully",
+// 		"linkedChildCount": linkedChildCount + 1,
+// 	})
+// }
 
 // LinkBagToBill links a parent bag to a bill, ensuring concurrency safety via row locks,
 // validating bag type, marking it as linked (and optionally soft-deleting), and providing
 // detailed error messages.
-func LinkBagToBill(c *gin.Context) {
+func LinkBagToBilll(c *gin.Context) {
 	var link models.Link
 	if err := c.ShouldBindJSON(&link); err != nil {
 		utils.HandleError(c, http.StatusBadRequest, "Invalid JSON payload", err)
@@ -233,128 +232,3 @@ func LinkBagToBill(c *gin.Context) {
 		link.ParentBag, link.BillID)
 	c.JSON(http.StatusOK, gin.H{"message": "Parent bag linked to bill successfully"})
 }
-
-// SearchBill retrieves the Bill ID for any bag (Parent or Child).
-// If it's a Child, we find its parent; if it's a Parent, we look up the link directly.
-func SearchBill(c *gin.Context) {
-	var link models.Link
-	qrCode := c.Query("qrCode")
-	if qrCode == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "qrCode query param is required"})
-		return
-	}
-
-	// 1) Find the bag in the `bags` table (parent or child)
-	var bag models.Bag
-	if err := database.DB.
-		Where("qr_code = ? AND deleted_at IS NULL", qrCode).
-		First(&bag).Error; err != nil {
-
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Bag not found"})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error retrieving bag"})
-		}
-		return
-	}
-
-	// 2) If the bag is a "Parent", we look for a Link in the `links` table
-	if bag.BagType == "Parent" {
-		// If you want to confirm `bag.Linked` is true or not, you could do a check:
-		// if !bag.Linked {
-		//    c.JSON(http.StatusOK, gin.H{"message": "Parent bag is not linked to any bill"})
-		//    return
-		// }
-
-		if err := database.DB.
-			Where("parent_bag = ?", bag.QRCode).
-			First(&link).Error; err != nil {
-
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusOK, gin.H{"message": "No bill linked to this parent bag"})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error retrieving link"})
-			}
-			return
-		}
-
-		// Found the link, return BillID
-		c.JSON(http.StatusOK, gin.H{
-			"billId": link.BillID,
-		})
-		return
-	}
-
-	// 3) If it's a Child bag, we look up the parent
-	if bag.BagType == "Child" {
-		if bag.ParentBag == "" {
-			c.JSON(http.StatusOK, gin.H{"message": "No parent assigned for this child bag"})
-			return
-		}
-
-		// Now find the link for the parent's QR code
-		if err := database.DB.
-			Where("parent_bag = ?", bag.ParentBag).
-			First(&link).Error; err != nil {
-
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				c.JSON(http.StatusOK, gin.H{"message": "No bill linked to this child bag"})
-			} else {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error retrieving link for child's parent"})
-			}
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{
-			"billId": link.BillID,
-		})
-		return
-	}
-
-	// If BagType is unknown (shouldn't happen), handle gracefully
-	c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid BagType for bag"})
-}
-
-// func UnlinkChildBag(c *gin.Context) {
-// 	var link models.BagMap
-// 	if err := c.ShouldBindJSON(&link); err != nil {
-// 		utils.HandleError(c, http.StatusBadRequest, "Invalid JSON", err)
-// 		return
-// 	}
-
-// 	tx := database.DB.Begin()
-
-// 	// Remove link
-// 	if err := tx.Delete(&models.BagMap{}, "parent_bag = ? AND child_bag = ?", link.ParentBag, link.ChildBag).Error; err != nil {
-// 		tx.Rollback()
-// 		utils.HandleError(c, http.StatusInternalServerError, "Failed to unlink child bag", err)
-// 		return
-// 	}
-
-// 	// Restore child bag
-// 	restoredChild := models.Bag{QRCode: link.ChildBag, BagType: "Child"}
-// 	if err := tx.Create(&restoredChild).Error; err != nil {
-// 		tx.Rollback()
-// 		utils.HandleError(c, http.StatusInternalServerError, "Failed to restore child bag", err)
-// 		return
-// 	}
-
-// 	tx.Commit()
-// 	c.JSON(http.StatusOK, gin.H{"message": "Child bag unlinked and restored successfully"})
-// }
-
-// func GetLinkedBagsByParent(c *gin.Context) {
-// 	parentBag := c.Query("parent_bag")
-// 	if parentBag == "" {
-// 		utils.HandleError(c, http.StatusBadRequest, "Parent Bag QR Code is required", nil)
-// 		return
-// 	}
-
-// 	var linkedBags []models.BagMap
-// 	if err := database.DB.Where("parent_bag = ?", parentBag).Find(&linkedBags).Error; err != nil {
-// 		utils.HandleError(c, http.StatusInternalServerError, "Failed to retrieve linked bags", err)
-// 		return
-// 	}
-
-// 	c.JSON(http.StatusOK, gin.H{"data": linkedBags})
-// }

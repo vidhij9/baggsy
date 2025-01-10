@@ -33,7 +33,7 @@ const SearchBill = () => {
 
   return (
     <div className="bg-white p-6 rounded-lg shadow-lg max-w-md mx-auto">
-      <h2 className="text-2xl font-bold text-primary mb-4">Find Bill by Child Bag</h2>
+      <h2 className="text-2xl font-bold text-primary mb-4">Find Bill by Bag QR Code</h2>
 
       <input
         type="text"
@@ -57,44 +57,3 @@ const SearchBill = () => {
 };
 
 export default SearchBill;
-
-
-// import React, { useState } from "react";
-// import { getBillByQRCode } from "../api/api"; // GET /bill-id?qrCode=...
-
-// const SearchBill = () => {
-//   const [qrCode, setQrCode] = useState("");
-//   const [message, setMessage] = useState("");
-//   const [billID, setBillID] = useState("");
-
-//   const handleSearch = async () => {
-//     try {
-//       // e.g. GET /bill-id?qrCode=xxxxx
-//       const response = await getBillByQRCode(qrCode);
-//       console.log(response.data);
-//       setMessage(response.data.message || "");
-//       setBillID(response.data.billId || "");
-//     } catch (error) {
-//       console.error("Error retrieving bill:", error.response?.data || error.message);
-//       setMessage(error.response?.data?.error || "Something went wrong");
-//       setBillID("");
-//     }
-//   };
-
-//   return (
-//     <div>
-//       <h2>Find Bill by Bag QR Code</h2>
-//       <input
-//         type="text"
-//         placeholder="Bag QR Code (Parent or Child)"
-//         value={qrCode}
-//         onChange={(e) => setQrCode(e.target.value)}
-//       />
-//       <button onClick={handleSearch}>Get Bill</button>
-//       {message && <p>{message}</p>}
-//       {billID && <p>Bill ID: {billID}</p>}
-//     </div>
-//   );
-// };
-
-// export default SearchBill;

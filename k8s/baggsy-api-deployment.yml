@@ -1,0 +1,45 @@
+# k8s/baggsy-api-deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: baggsy-api
+spec:
+  replicas: 3  # run 3 instances for horizontal scaling
+  selector:
+    matchLabels:
+      app: baggsy-api
+  template:
+    metadata:
+      labels:
+        app: baggsy-api
+    spec:
+      containers:
+      - name: baggsy-api
+        image: your-registry/baggsy-api:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DB_HOST
+          value: "baggsy-db.default.svc.cluster.local"
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_USER
+          value: "baggsy"
+        - name: DB_PASSWORD
+          value: "baggsy"
+        - name: DB_NAME
+          value: "baggsy_db"
+        - name: PORT
+          value: "8080"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 15
+          periodSeconds: 20

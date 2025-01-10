@@ -21,11 +21,15 @@ func Connect() {
 	var err error
 
 	// PostgreSQL connection string
-	// Replace the placeholders with your actual credentials
+	// Build DSN from environment variables
+	// host := os.Getenv("DB_HOST")
+	// port := os.Getenv("DB_PORT")
+	// user := os.Getenv("DB_USER")
+	// password := os.Getenv("DB_PASSWORD")
+	// dbName := os.Getenv("DB_NAME")
 
-	// dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
-	// 	os.Getenv("DB_HOST"), os.Getenv("DB_USER"), os.Getenv("DB_PASS"),
-	// 	os.Getenv("DB_NAME"), os.Getenv("DB_PORT"))
+	// dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
+	// 	host, port, user, password, dbName)
 
 	dsn := "host=localhost user=baggsy password=baggsy dbname=baggsy port=5432 sslmode=disable TimeZone=Asia/Kolkata"
 
@@ -36,6 +40,15 @@ func Connect() {
 			log.Println("Database connection established")
 			return
 		}
+
+		// Setup connection pooling
+		sqlDB, err := DB.DB()
+		if err != nil {
+			log.Fatalf("Failed to get sql.DB from GORM: %v", err)
+		}
+		sqlDB.SetMaxOpenConns(100) // max number of open connections
+		sqlDB.SetMaxIdleConns(50)  // max number of idle connections
+		sqlDB.SetConnMaxLifetime(5 * time.Minute)
 
 		log.Printf("Failed to connect to database. Retrying... (%d/%d)\n", i+1, retryCount)
 		time.Sleep(2 * time.Second) // Wait for 2 seconds before retrying
