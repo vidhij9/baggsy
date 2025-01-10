@@ -11,14 +11,14 @@ CREATE TABLE bags (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create the bag_map table for mapping parent and child bags
-CREATE TABLE bag_map (
-    id SERIAL PRIMARY KEY,
-    parent_bag VARCHAR(255) NOT NULL,
-    child_bag VARCHAR(255) NOT NULL,
-    UNIQUE (parent_bag, child_bag),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
+-- -- Create the bag_map table for mapping parent and child bags
+-- CREATE TABLE bag_map (
+--     id SERIAL PRIMARY KEY,
+--     parent_bag VARCHAR(255) NOT NULL,
+--     child_bag VARCHAR(255) NOT NULL,
+--     UNIQUE (parent_bag, child_bag),
+--     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+-- );
 
 -- Create the links table for linking parent bags to bill IDs
 CREATE TABLE links (
@@ -32,8 +32,8 @@ CREATE TABLE links (
 -- Add indexes for fast lookups
 CREATE INDEX idx_bags_qr_code ON bags (qr_code);
 CREATE INDEX idx_bags_linked ON bags (linked); -- Index for the "linked" field
-CREATE INDEX idx_bag_map_parent_bag ON bag_map (parent_bag);
-CREATE INDEX idx_bag_map_child_bag ON bag_map (child_bag);
+-- CREATE INDEX idx_bag_map_parent_bag ON bag_map (parent_bag);
+-- CREATE INDEX idx_bag_map_child_bag ON bag_map (child_bag);
 CREATE INDEX idx_links_bill_id ON links (bill_id);
 CREATE INDEX idx_parent_bag ON bags (parent_bag);
 

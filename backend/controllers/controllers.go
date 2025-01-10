@@ -4,6 +4,7 @@ import (
 	"baggsy/backend/database"
 	"baggsy/backend/models"
 	"baggsy/backend/utils"
+	"errors"
 	"log"
 	"net/http"
 
@@ -233,65 +234,127 @@ func LinkBagToBill(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Parent bag linked to bill successfully"})
 }
 
-func SearchBillByBag(c *gin.Context) {
-	qrCode := c.Query("qr_code")
-	if qrCode == "" {
-		utils.HandleError(c, http.StatusBadRequest, "QR Code is required", nil)
-		return
-	}
-
+// SearchBill retrieves the Bill ID for any bag (Parent or Child).
+// If it's a Child, we find its parent; if it's a Parent, we look up the link directly.
+func SearchBill(c *gin.Context) {
 	var link models.Link
-	if err := database.DB.Table("links").
-		Joins("JOIN bag_map ON bag_map.parent_bag = links.parent_bag").
-		Where("bag_map.child_bag = ? AND bag_map.deleted_at IS NULL", qrCode).
-		First(&link).Error; err != nil {
-		utils.HandleError(c, http.StatusNotFound, "Bill ID not found for this child bag", err)
+	qrCode := c.Query("qrCode")
+	if qrCode == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "qrCode query param is required"})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"bill_id": link.BillID})
+	// 1) Find the bag in the `bags` table (parent or child)
+	var bag models.Bag
+	if err := database.DB.
+		Where("qr_code = ? AND deleted_at IS NULL", qrCode).
+		First(&bag).Error; err != nil {
+
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "Bag not found"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error retrieving bag"})
+		}
+		return
+	}
+
+	// 2) If the bag is a "Parent", we look for a Link in the `links` table
+	if bag.BagType == "Parent" {
+		// If you want to confirm `bag.Linked` is true or not, you could do a check:
+		// if !bag.Linked {
+		//    c.JSON(http.StatusOK, gin.H{"message": "Parent bag is not linked to any bill"})
+		//    return
+		// }
+
+		if err := database.DB.
+			Where("parent_bag = ?", bag.QRCode).
+			First(&link).Error; err != nil {
+
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(http.StatusOK, gin.H{"message": "No bill linked to this parent bag"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error retrieving link"})
+			}
+			return
+		}
+
+		// Found the link, return BillID
+		c.JSON(http.StatusOK, gin.H{
+			"billId": link.BillID,
+		})
+		return
+	}
+
+	// 3) If it's a Child bag, we look up the parent
+	if bag.BagType == "Child" {
+		if bag.ParentBag == "" {
+			c.JSON(http.StatusOK, gin.H{"message": "No parent assigned for this child bag"})
+			return
+		}
+
+		// Now find the link for the parent's QR code
+		if err := database.DB.
+			Where("parent_bag = ?", bag.ParentBag).
+			First(&link).Error; err != nil {
+
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				c.JSON(http.StatusOK, gin.H{"message": "No bill linked to this child bag"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error retrieving link for child's parent"})
+			}
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
+			"billId": link.BillID,
+		})
+		return
+	}
+
+	// If BagType is unknown (shouldn't happen), handle gracefully
+	c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid BagType for bag"})
 }
 
-func UnlinkChildBag(c *gin.Context) {
-	var link models.BagMap
-	if err := c.ShouldBindJSON(&link); err != nil {
-		utils.HandleError(c, http.StatusBadRequest, "Invalid JSON", err)
-		return
-	}
+// func UnlinkChildBag(c *gin.Context) {
+// 	var link models.BagMap
+// 	if err := c.ShouldBindJSON(&link); err != nil {
+// 		utils.HandleError(c, http.StatusBadRequest, "Invalid JSON", err)
+// 		return
+// 	}
 
-	tx := database.DB.Begin()
+// 	tx := database.DB.Begin()
 
-	// Remove link
-	if err := tx.Delete(&models.BagMap{}, "parent_bag = ? AND child_bag = ?", link.ParentBag, link.ChildBag).Error; err != nil {
-		tx.Rollback()
-		utils.HandleError(c, http.StatusInternalServerError, "Failed to unlink child bag", err)
-		return
-	}
+// 	// Remove link
+// 	if err := tx.Delete(&models.BagMap{}, "parent_bag = ? AND child_bag = ?", link.ParentBag, link.ChildBag).Error; err != nil {
+// 		tx.Rollback()
+// 		utils.HandleError(c, http.StatusInternalServerError, "Failed to unlink child bag", err)
+// 		return
+// 	}
 
-	// Restore child bag
-	restoredChild := models.Bag{QRCode: link.ChildBag, BagType: "Child"}
-	if err := tx.Create(&restoredChild).Error; err != nil {
-		tx.Rollback()
-		utils.HandleError(c, http.StatusInternalServerError, "Failed to restore child bag", err)
-		return
-	}
+// 	// Restore child bag
+// 	restoredChild := models.Bag{QRCode: link.ChildBag, BagType: "Child"}
+// 	if err := tx.Create(&restoredChild).Error; err != nil {
+// 		tx.Rollback()
+// 		utils.HandleError(c, http.StatusInternalServerError, "Failed to restore child bag", err)
+// 		return
+// 	}
 
-	tx.Commit()
-	c.JSON(http.StatusOK, gin.H{"message": "Child bag unlinked and restored successfully"})
-}
+// 	tx.Commit()
+// 	c.JSON(http.StatusOK, gin.H{"message": "Child bag unlinked and restored successfully"})
+// }
 
-func GetLinkedBagsByParent(c *gin.Context) {
-	parentBag := c.Query("parent_bag")
-	if parentBag == "" {
-		utils.HandleError(c, http.StatusBadRequest, "Parent Bag QR Code is required", nil)
-		return
-	}
+// func GetLinkedBagsByParent(c *gin.Context) {
+// 	parentBag := c.Query("parent_bag")
+// 	if parentBag == "" {
+// 		utils.HandleError(c, http.StatusBadRequest, "Parent Bag QR Code is required", nil)
+// 		return
+// 	}
 
-	var linkedBags []models.BagMap
-	if err := database.DB.Where("parent_bag = ?", parentBag).Find(&linkedBags).Error; err != nil {
-		utils.HandleError(c, http.StatusInternalServerError, "Failed to retrieve linked bags", err)
-		return
-	}
+// 	var linkedBags []models.BagMap
+// 	if err := database.DB.Where("parent_bag = ?", parentBag).Find(&linkedBags).Error; err != nil {
+// 		utils.HandleError(c, http.StatusInternalServerError, "Failed to retrieve linked bags", err)
+// 		return
+// 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": linkedBags})
-}
+// 	c.JSON(http.StatusOK, gin.H{"data": linkedBags})
+// }

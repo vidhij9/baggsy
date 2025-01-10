@@ -46,7 +46,7 @@ Architecture & Technology Stack
 	•	/link-bag-to-bill: Ties a parent bag to a bill.
 	3.	Database Schema:
 	•	bags Table: Stores QR codes, bag types (parent or child), child count, and an optional parentBag field for child bags.
-	•	bag_maps Table (optional approach): Maps parent bag to child bag, if the system needs a separate table for relationships.
+	<!-- •	bag_maps Table (optional approach): Maps parent bag to child bag, if the system needs a separate table for relationships. -->
 	•	links Table (optional approach): Links a parent bag to a bill ID.
 
 Typical Use Cases

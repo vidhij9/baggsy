@@ -18,7 +18,7 @@ func setupRouter() *gin.Engine {
 	router.POST("/register-bag", controllers.RegisterBag)
 	router.POST("/link-child-bag", controllers.LinkChildBagToParent)
 	router.POST("/link-bag-to-bill", controllers.LinkBagToBill)
-	router.GET("/search-bill-by-bag", controllers.SearchBillByBag)
+	router.GET("/search-bill", controllers.SearchBill)
 	return router
 }
 
@@ -33,7 +33,7 @@ func TestRegisterBag(t *testing.T) {
 	jsonBody, _ := json.Marshal(body)
 
 	w := httptest.NewRecorder()
-	req, _ := http.NewRequest("POST", "/create-bag", bytes.NewBuffer(jsonBody))
+	req, _ := http.NewRequest("POST", "/register-bag", bytes.NewBuffer(jsonBody))
 	req.Header.Set("Content-Type", "application/json")
 	router.ServeHTTP(w, req)
 
@@ -52,11 +52,11 @@ func TestDuplicateBag(t *testing.T) {
 	jsonBody, _ := json.Marshal(body)
 
 	// Register the first bag
-	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/create-bag", bytes.NewBuffer(jsonBody)))
+	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/register-bag", bytes.NewBuffer(jsonBody)))
 
 	// Try registering the same bag again
 	w := httptest.NewRecorder()
-	router.ServeHTTP(w, httptest.NewRequest("POST", "/create-bag", bytes.NewBuffer(jsonBody)))
+	router.ServeHTTP(w, httptest.NewRequest("POST", "/register-bag", bytes.NewBuffer(jsonBody)))
 
 	assert.Equal(t, http.StatusConflict, w.Code)
 	assert.Contains(t, w.Body.String(), "Bag with this QR code already exists")
@@ -66,10 +66,10 @@ func TestLinkBags(t *testing.T) {
 	router := setupRouter()
 
 	// Register Parent Bag
-	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/create-bag", bytes.NewBuffer([]byte(`{"qr_code":"PARENT123","bag_type":"Parent","status":"Active"}`))))
+	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/register-bag", bytes.NewBuffer([]byte(`{"qr_code":"PARENT123","bag_type":"Parent","status":"Active"}`))))
 
 	// Register Child Bag
-	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/create-bag", bytes.NewBuffer([]byte(`{"qr_code":"CHILD123","bag_type":"Child","status":"Active"}`))))
+	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/register-bag", bytes.NewBuffer([]byte(`{"qr_code":"CHILD123","bag_type":"Child","status":"Active"}`))))
 
 	// Link Parent and Child
 	linkBody := map[string]string{
@@ -87,15 +87,15 @@ func TestLinkBags(t *testing.T) {
 	assert.Contains(t, w.Body.String(), "Bags linked successfully")
 }
 
-func TestSearchBillByBag(t *testing.T) {
+func TestSearchBill(t *testing.T) {
 	router := setupRouter()
 
 	// Register and link bag to a bill
-	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/create-bag", bytes.NewBuffer([]byte(`{"qr_code":"SEARCH123","bag_type":"Parent","status":"Active"}`))))
+	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/register-bag", bytes.NewBuffer([]byte(`{"qr_code":"SEARCH123","bag_type":"Parent","status":"Active"}`))))
 	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/link-bag-to-bill", bytes.NewBuffer([]byte(`{"parent_bag_qr_code":"SEARCH123","bill_id":"BILL123"}`))))
 
 	// Search for the bag
-	req := httptest.NewRequest("GET", "/search-bill-by-bag?qr_code=SEARCH123", nil)
+	req := httptest.NewRequest("GET", "/search-bill?qr_code=SEARCH123", nil)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
@@ -106,10 +106,10 @@ func TestUnlinkChildBag(t *testing.T) {
 	router := setupRouter()
 
 	// Register Parent Bag
-	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/create-bag", bytes.NewBuffer([]byte(`{"qr_code":"PARENT123","bag_type":"Parent","status":"Active"}`))))
+	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/register-bag", bytes.NewBuffer([]byte(`{"qr_code":"PARENT123","bag_type":"Parent","status":"Active"}`))))
 
 	// Register Child Bag
-	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/create-bag", bytes.NewBuffer([]byte(`{"qr_code":"CHILD123","bag_type":"Child","status":"Active"}`))))
+	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/register-bag", bytes.NewBuffer([]byte(`{"qr_code":"CHILD123","bag_type":"Child","status":"Active"}`))))
 
 	// Link Parent and Child
 	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/link-bags", bytes.NewBuffer([]byte(`{"parent_bag_qr_code":"PARENT123","child_bag_qr_code":"CHILD123"}`))))
@@ -134,10 +134,10 @@ func TestGetLinkedBagsByParent(t *testing.T) {
 	router := setupRouter()
 
 	// Register Parent Bag
-	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/create-bag", bytes.NewBuffer([]byte(`{"qr_code":"PARENT123","bag_type":"Parent","status":"Active"}`))))
+	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/register-bag", bytes.NewBuffer([]byte(`{"qr_code":"PARENT123","bag_type":"Parent","status":"Active"}`))))
 
 	// Register Child Bag
-	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/create-bag", bytes.NewBuffer([]byte(`{"qr_code":"CHILD123","bag_type":"Child","status":"Active"}`))))
+	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/register-bag", bytes.NewBuffer([]byte(`{"qr_code":"CHILD123","bag_type":"Child","status":"Active"}`))))
 
 	// Link Parent and Child
 	router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("POST", "/link-bags", bytes.NewBuffer([]byte(`{"parent_bag_qr_code":"PARENT123","child_bag_qr_code":"CHILD123"}`))))

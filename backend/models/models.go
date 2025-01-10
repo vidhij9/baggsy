@@ -19,12 +19,12 @@ type BagRequest struct {
 	ChildBag  string `json:"childBag" binding:"required"`  // Ensure this matches the JSON payload
 }
 
-type BagMap struct {
-	ID        uint   `gorm:"primaryKey"`
-	ParentBag string `gorm:"not null"`
-	ChildBag  string `gorm:"not null"`
-	CreatedAt string `gorm:"default:current_timestamp"`
-}
+// type BagMap struct {
+// 	ID        uint   `gorm:"primaryKey"`
+// 	ParentBag string `gorm:"not null"`
+// 	ChildBag  string `gorm:"not null"`
+// 	CreatedAt string `gorm:"default:current_timestamp"`
+// }
 
 type Link struct {
 	ID        uint   `gorm:"primaryKey"`

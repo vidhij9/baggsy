@@ -43,7 +43,7 @@ func main() {
 	r.POST("/register-bag", controllers.RegisterBag)
 	r.POST("/link-child-bag", controllers.LinkChildBagToParent)
 	r.POST("/link-bag-to-bill", controllers.LinkBagToBill)
-	r.GET("/search-bill-by-bag", controllers.SearchBillByBag)
+	r.GET("/search-bill", controllers.SearchBill)
 	r.GET("/linked-bags", controllers.GetLinkedBagsByParent)
 
 	// Use a configurable port from environment variables
