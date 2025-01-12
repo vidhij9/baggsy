@@ -1,0 +1,14 @@
+# k8s/baggsy-react-service.yml
+apiVersion: v1
+kind: Service
+metadata:
+  name: baggsy-react
+spec:
+  type: ClusterIP
+  selector:
+    app: baggsy-react
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+      name: http
