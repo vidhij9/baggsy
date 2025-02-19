@@ -1,66 +1,61 @@
 package database
 
 import (
+	"database/sql"
+	"fmt"
 	"log"
 	"time"
 
-	"github.com/joho/godotenv"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
-var DB *gorm.DB
-
-func LoadConfig() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatalf("Error loading .env file")
-	}
-}
-
-func Connect() {
+// ConnectDB tries to open a database connection with retries and returns the *sql.DB.
+func ConnectDB(dsn string) (*sql.DB, error) {
+	var db *sql.DB
 	var err error
+	maxRetries := 5
 
-	// PostgreSQL connection string
-	// Build DSN from environment variables
-	// host := os.Getenv("DB_HOST")
-	// port := os.Getenv("DB_PORT")
-	// user := os.Getenv("DB_USER")
-	// password := os.Getenv("DB_PASSWORD")
-	// dbName := os.Getenv("DB_NAME")
-
-	// dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-	// 	host, port, user, password, dbName)
-
-	dsn := "host=localhost user=baggsy password=baggsy dbname=baggsy port=5432 sslmode=disable TimeZone=Asia/Kolkata"
-
-	retryCount := 5
-	for i := 0; i < retryCount; i++ {
-		DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
-		if err == nil {
-			log.Println("Database connection established")
-			return
-		}
-
-		// Setup connection pooling
-		sqlDB, err := DB.DB()
+	for i := 1; i <= maxRetries; i++ {
+		db, err = sql.Open("postgres", dsn)
 		if err != nil {
-			log.Fatalf("Failed to get sql.DB from GORM: %v", err)
+			log.Printf("Database connection attempt %d failed: %v", i, err)
+		} else {
+			// Try pinging the database to ensure the connection is valid
+			pingErr := db.Ping()
+			if pingErr == nil {
+				log.Printf("Successfully connected to database on attempt %d", i)
+				break // exit loop on success
+			}
+			// If ping failed, close this db handle and prepare to retry
+			log.Printf("Database ping attempt %d failed: %v", i, pingErr)
+			_ = db.Close() // close the opened connection before retry
+			err = pingErr  // treat ping error as the current error
 		}
-		sqlDB.SetMaxOpenConns(100) // max number of open connections
-		sqlDB.SetMaxIdleConns(50)  // max number of idle connections
-		sqlDB.SetConnMaxLifetime(5 * time.Minute)
 
-		log.Printf("Failed to connect to database. Retrying... (%d/%d)\n", i+1, retryCount)
-		time.Sleep(2 * time.Second) // Wait for 2 seconds before retrying
+		if i < maxRetries {
+			// Exponential backoff before next attempt
+			time.Sleep(time.Duration(i) * time.Second)
+		}
 	}
 
-	log.Fatal("Failed to connect to database after retries:", err)
+	if err != nil {
+		// All attempts failed
+		return nil, fmt.Errorf("failed to connect to database after %d attempts: %w", maxRetries, err)
+	}
+
+	// Configure connection pool settings
+	db.SetMaxOpenConns(10)                  // max open connections (in-use + idle)
+	db.SetMaxIdleConns(5)                   // max idle connections to retain
+	db.SetConnMaxLifetime(30 * time.Minute) // recycle connections periodically
+	log.Println("Database connection pool configured (MaxOpenConns=10, MaxIdleConns=5).")
+
+	return db, nil
 }
 
-func Close() error {
-	sqlDB, err := DB.DB()
-	if err != nil {
-		return err
+// CloseDB closes the given database connection cleanly.
+func CloseDB(db *sql.DB) error {
+	if db != nil {
+		return db.Close()
 	}
-	return sqlDB.Close()
+	return nil
 }

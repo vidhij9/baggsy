@@ -1,33 +1,24 @@
 package utils
 
 import (
+	"baggsy/backend/models"
 	"errors"
 	"log"
-	"strconv"
-	"strings"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
-// Example function to extract the number of child bags from the QR code
-func ExtractChildBagCount(qrCode string) (int, error) {
-	// Assuming the QR code contains metadata in the format "parent-<childCount>"
-	// Example: "parent-5" means 5 child bags
-	parts := strings.Split(qrCode, "-")
-	if len(parts) < 2 {
-		return 0, errors.New("invalid QR code format")
-	}
-
-	childCount, err := strconv.Atoi(parts[1])
+// ExtractChildBagCount returns how many child bags are linked to the given parent bag.
+func ExtractChildBagCount(db *gorm.DB, parentID uint) int {
+	var count int64
+	// Count all bags that have ParentBagID = parentID (i.e., are children of this parent)
+	err := db.Model(&models.Bag{}).Where("parent_bag_id = ?", parentID).Count(&count).Error
 	if err != nil {
-		return 0, errors.New("invalid child count in QR code")
+		log.Println("ExtractChildBagCount: error counting child bags for parent", parentID, "-", err)
+		return 0 // on error, return 0 (and log it); alternatively, handle error upstream
 	}
-
-	if childCount < 0 {
-		return 0, errors.New("child count cannot be negative")
-	}
-
-	return childCount, nil
+	return int(count)
 }
 
 // Utility to validate bag inputs
@@ -42,28 +33,7 @@ func ValidateBagInput(qrCode, bagType string, childCount int) error {
 }
 
 // Centralized error handler
-func HandleError(c *gin.Context, statusCode int, message string, err error) {
-	if err != nil {
-		log.Printf("Error: %v", err)
-	}
-	c.JSON(statusCode, gin.H{"error": message})
+func HandleError(c *gin.Context, statusCode int, errMsg string) {
+	// Optionally log the error message here as well
+	c.JSON(statusCode, gin.H{"error": errMsg})
 }
-
-// // Helper to validate child-parent relationships
-// func ValidateChildParentRelationship(parentBagQR string, childBagQR string) error {
-// 	var bagMap models.BagMap
-// 	if err := database.DB.Where("parent_bag = ? AND child_bag = ?", parentBagQR, childBagQR).First(&bagMap).Error; err == nil {
-// 		return errors.New("child bag already linked to this parent bag")
-// 	}
-// 	return nil
-// }
-
-// // Helper to validate maximum child bag count
-// func ValidateChildBagCount(parentBag string, maxCount int) error {
-// 	var count int64
-// 	database.DB.Model(&models.BagMap{}).Where("parent_bag = ?", parentBag).Count(&count)
-// 	if int(count) >= maxCount {
-// 		return fmt.Errorf("parent bag already has the maximum number of child bags (%d)", maxCount)
-// 	}
-// 	return nil
-// }

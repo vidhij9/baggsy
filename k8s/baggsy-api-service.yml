@@ -1,4 +1,3 @@
-# k8s/baggsy-api-service.yml
 apiVersion: v1
 kind: Service
 metadata:

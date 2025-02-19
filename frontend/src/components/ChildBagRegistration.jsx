@@ -10,7 +10,7 @@ const ChildBagRegistration = ({ parentBag, onChildBagsCompleted }) => {
     console.log("ChildBagRegistration loaded. ParentBag:", parentBag);
     console.log("ChildCount: ", parentBag.ChildCount || 0)
     console.log("LinkedCount: ", linkedCount)
-  }, [parentBag]);
+  }, [parentBag, linkedCount]);
 
   const handleLinkChildBag = async () => {
     if (!qrCode) {
