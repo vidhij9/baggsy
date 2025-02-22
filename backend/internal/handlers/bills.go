@@ -8,6 +8,7 @@ import (
 	"baggsy/backend/internal/models"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jinzhu/gorm"
 )
 
 func LinkBagsToBillHandler(c *gin.Context) {
@@ -21,6 +22,10 @@ func LinkBagsToBillHandler(c *gin.Context) {
 		return
 	}
 
+	if req.Capacity <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Capacity must be greater than zero"})
+		return
+	}
 	if len(req.ParentIDs) != req.Capacity {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Number of parent bags must match capacity"})
 		return
@@ -68,7 +73,11 @@ func UnlinkBagHandler(c *gin.Context) {
 	var link models.Link
 	if err := tx.Where("parent_id = ?", id).First(&link).Error; err != nil {
 		tx.Rollback()
-		c.JSON(http.StatusNotFound, gin.H{"error": "Link not found"})
+		if gorm.IsRecordNotFoundError(err) {
+			c.JSON(http.StatusNotFound, gin.H{"error": "No link found for this bag"})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to check link"})
+		}
 		return
 	}
 
@@ -89,8 +98,21 @@ func UnlinkBagHandler(c *gin.Context) {
 }
 
 func ListBillsHandler(c *gin.Context) {
+	page, _ := strconv.Atoi(c.Query("page"))
+	limit, _ := strconv.Atoi(c.Query("limit"))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 10
+	}
+	offset := (page - 1) * limit
+
+	var total int64
+	db.DB.Model(&models.Link{}).Count(&total)
+
 	var links []models.Link
-	if err := db.DB.Find(&links).Error; err != nil {
+	if err := db.DB.Offset(offset).Limit(limit).Order("created_at DESC").Find(&links).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list bills"})
 		return
 	}
@@ -98,8 +120,12 @@ func ListBillsHandler(c *gin.Context) {
 	billMap := make(map[string][]models.Bag)
 	for _, link := range links {
 		var bag models.Bag
-		db.DB.First(&bag, link.ParentID)
-		billMap[link.BillID] = append(billMap[link.BillID], bag)
+		if err := db.DB.First(&bag, link.ParentID).Error; err == nil {
+			var children []models.Bag
+			db.DB.Where("parent_id = ?", bag.ID).Find(&children)
+			bag.Children = children
+			billMap[link.BillID] = append(billMap[link.BillID], bag)
+		}
 	}
 
 	type BillResponse struct {
@@ -111,14 +137,19 @@ func ListBillsHandler(c *gin.Context) {
 		response = append(response, BillResponse{BillID: billID, Bags: bags})
 	}
 
+	c.Header("X-Total-Count", strconv.FormatInt(total, 10))
 	c.JSON(http.StatusOK, response)
 }
 
 func SearchBillByNumberHandler(c *gin.Context) {
 	billID := c.Param("billID")
+	if billID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Bill ID is required"})
+		return
+	}
 	var links []models.Link
 	if err := db.DB.Where("bill_id = ?", billID).Find(&links).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Bill not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Bill not found with ID: " + billID})
 		return
 	}
 
@@ -128,7 +159,7 @@ func SearchBillByNumberHandler(c *gin.Context) {
 		if err := db.DB.First(&bag, link.ParentID).Error; err == nil {
 			var children []models.Bag
 			db.DB.Where("parent_id = ?", bag.ID).Find(&children)
-			bag.Children = children // Assuming Bag model has a Children field for response
+			bag.Children = children
 			bags = append(bags, bag)
 		}
 	}

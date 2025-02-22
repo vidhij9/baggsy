@@ -5,20 +5,36 @@ import { toast } from 'react-toastify';
 import { ArchiveBoxIcon } from '@heroicons/react/24/solid';
 import RegisterChildModal from './RegisterChildModal';
 
-function RegisterParent({ setError }) {
+function RegisterParent({ setError, token }) {
   const [qr, setQr] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showChildModal, setShowChildModal] = useState(false);
   const [parentData, setParentData] = useState(null);
 
+  const validateQR = (qrCode) => {
+    const parts = qrCode.split('-');
+    if (parts.length !== 2 || !parts[0].startsWith('P')) return false;
+    const count = parseInt(parts[1], 10);
+    return !isNaN(count) && count > 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateQR(qr)) {
+      setError('Invalid QR format. Use P<Number>-<ChildCount> (e.g., P123-10)');
+      toast.error('Invalid QR format. Use P<Number>-<ChildCount> (e.g., P123-10)', { position: 'top-center' });
+      return;
+    }
     setIsLoading(true);
     try {
-      const res = await axios.post('http://localhost:8080/api/register-parent', {
-        qrCode: qr,
-        type: 'parent',
-      });
+      const res = await axios.post(
+        'http://localhost:8080/api/register-parent',
+        { qrCode: qr, type: 'parent' },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.data.childCount <= 0) {
+        throw new Error('Parent bag must have at least one child bag');
+      }
       setParentData(res.data);
       setShowChildModal(true);
       setQr('');
@@ -29,8 +45,8 @@ function RegisterParent({ setError }) {
         setError('Session expired. Please log in again.');
         toast.error('Session expired. Logging out...', { position: 'top-center' });
       } else {
-        setError(err.response?.data?.error || 'Registration failed');
-        toast.error(err.response?.data?.error || 'Registration failed', { position: 'top-center' });
+        setError(err.response?.data?.error || err.message || 'Registration failed');
+        toast.error(err.response?.data?.error || err.message || 'Registration failed', { position: 'top-center' });
       }
     } finally {
       setIsLoading(false);
@@ -83,6 +99,7 @@ function RegisterParent({ setError }) {
             setParentData(null);
           }}
           setError={setError}
+          token={token}
         />
       )}
     </>

@@ -15,28 +15,59 @@ function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [role, setRole] = useState(localStorage.getItem('role'));
   const [error, setError] = useState(null);
+  const [view, setView] = useState('register');
   const [showLinkModal, setShowLinkModal] = useState(false);
 
   useEffect(() => {
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      validateToken();
     }
   }, [token]);
 
-  const logout = () => {
+  const validateToken = async () => {
+    try {
+      const res = await axios.get('http://localhost:8080/api/bags', { headers: { Authorization: `Bearer ${token}` } });
+      if (res.status === 200 && role !== localStorage.getItem('role')) {
+        setRole(null);
+        logout();
+      }
+    } catch (err) {
+      if (err.response?.status === 401) {
+        logout('Session expired. Please log in again.');
+      }
+    }
+  };
+
+  const logout = (message = 'Logged out successfully.') => {
     setToken(null);
     setRole(null);
     localStorage.removeItem('token');
     localStorage.removeItem('role');
     delete axios.defaults.headers.common['Authorization'];
-    toast.info('Logged out successfully.', { position: 'top-center' });
+    toast.info(message, { position: 'top-center' });
+  };
+
+  const renderView = () => {
+    switch (view) {
+      case 'register':
+        return <RegisterParent setError={setError} token={token} />;
+      case 'listBags':
+        return role === 'admin' ? <ListBags setError={setError} token={token} /> : <p className="text-red-500">Unauthorized</p>;
+      case 'listBills':
+        return role === 'admin' ? <ListBills setError={setError} token={token} /> : <p className="text-red-500">Unauthorized</p>;
+      case 'search':
+        return role === 'admin' ? <Search setError={setError} token={token} /> : <p className="text-red-500">Unauthorized</p>;
+      default:
+        return <RegisterParent setError={setError} token={token} />;
+    }
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
       <ToastContainer />
       {!token ? (
-        <Login setToken={setToken} setRole={setRole} setError={setError} />
+        <Login setToken={setToken} setRole={setRole} setError={setError} logout={logout} />
       ) : (
         <div className="w-full max-w-5xl">
           <motion.header
@@ -48,30 +79,55 @@ function App() {
               <SparklesIcon className="w-8 h-8 text-primary mr-2" />
               <h1 className="text-3xl font-bold text-accent">Star Agriseeds Baggsy</h1>
             </div>
-            <button
-              onClick={logout}
-              className="bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition duration-300"
-            >
-              Logout
-            </button>
+            <div className="flex space-x-4">
+              <button
+                onClick={() => setView('register')}
+                className={`py-2 px-4 rounded-lg ${view === 'register' ? 'bg-primary text-white' : 'bg-gray-200'}`}
+              >
+                Register
+              </button>
+              {role === 'admin' && (
+                <>
+                  <button
+                    onClick={() => setView('listBags')}
+                    className={`py-2 px-4 rounded-lg ${view === 'listBags' ? 'bg-primary text-white' : 'bg-gray-200'}`}
+                  >
+                    List Bags
+                  </button>
+                  <button
+                    onClick={() => setView('listBills')}
+                    className={`py-2 px-4 rounded-lg ${view === 'listBills' ? 'bg-primary text-white' : 'bg-gray-200'}`}
+                  >
+                    List Bills
+                  </button>
+                  <button
+                    onClick={() => setView('search')}
+                    className={`py-2 px-4 rounded-lg ${view === 'search' ? 'bg-primary text-white' : 'bg-gray-200'}`}
+                  >
+                    Search
+                  </button>
+                </>
+              )}
+              {(role === 'employee' || role === 'admin') && (
+                <button
+                  onClick={() => setShowLinkModal(true)}
+                  className="py-2 px-4 rounded-lg bg-secondary text-white hover:bg-yellow-600"
+                >
+                  Link Bags to Bill
+                </button>
+              )}
+              <button
+                onClick={() => logout()}
+                className="bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600"
+              >
+                Logout
+              </button>
+            </div>
           </motion.header>
           {error && <p className="text-red-500 text-center mb-6">{error}</p>}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <RegisterParent setError={setError} />
-            {role === "admin" && <ListBags setError={setError} />}
-            {(role === "employee" || role === "admin") && (
-              <button
-                onClick={() => setShowLinkModal(true)}
-                className="bg-secondary text-white py-3 rounded-lg hover:bg-yellow-600 transition duration-300"
-              >
-                Link Bags to Bill
-              </button>
-            )}
-            {role === "admin" && <ListBills setError={setError} />}
-            {role === "admin" && <Search setError={setError} />}
-          </div>
+          {renderView()}
           {showLinkModal && (
-            <LinkBagsToBillModal setError={setError} closeModal={() => setShowLinkModal(false)} />
+            <LinkBagsToBillModal setError={setError} closeModal={() => setShowLinkModal(false)} token={token} />
           )}
         </div>
       )}

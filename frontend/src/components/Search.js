@@ -4,27 +4,38 @@ import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 
-function Search({ setError }) {
+function Search({ setError, token }) {
   const [qr, setQr] = useState('');
   const [bill, setBill] = useState('');
   const [result, setResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [expandedParents, setExpandedParents] = useState({});
 
+  const validateQR = (qrCode) => qrCode.trim().length > 0;
+  const validateBill = (billID) => billID.trim().length > 0;
+
   const searchByQr = async () => {
+    if (!validateQR(qr)) {
+      setError('Invalid QR code');
+      toast.error('Invalid QR code', { position: 'top-center' });
+      return;
+    }
     setIsLoading(true);
     try {
-      const res = await axios.get(`http://localhost:8080/api/bag/${qr}`);
+      const res = await axios.get(`http://localhost:8080/api/bag/${encodeURIComponent(qr)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setResult({ type: 'bag', data: res.data });
       setError(null);
       toast.success('Bag found!', { position: 'top-center' });
     } catch (err) {
+      const errorMsg = err.response?.data?.error || 'Search failed';
       if (err.response?.status === 401) {
         setError('Session expired. Please log in again.');
         toast.error('Session expired. Logging out...', { position: 'top-center' });
       } else {
-        setError(err.response?.data?.error || 'Search failed');
-        toast.error(err.response?.data?.error || 'Search failed', { position: 'top-center' });
+        setError(errorMsg);
+        toast.error(errorMsg, { position: 'top-center' });
       }
     } finally {
       setIsLoading(false);
@@ -32,19 +43,27 @@ function Search({ setError }) {
   };
 
   const searchByBill = async () => {
+    if (!validateBill(bill)) {
+      setError('Invalid Bill ID');
+      toast.error('Invalid Bill ID', { position: 'top-center' });
+      return;
+    }
     setIsLoading(true);
     try {
-      const res = await axios.get(`http://localhost:8080/api/bill/${bill}`);
+      const res = await axios.get(`http://localhost:8080/api/bill/${encodeURIComponent(bill)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setResult({ type: 'bill', data: res.data });
       setError(null);
       toast.success('Bill found!', { position: 'top-center' });
     } catch (err) {
+      const errorMsg = err.response?.data?.error || 'Search failed';
       if (err.response?.status === 401) {
         setError('Session expired. Please log in again.');
         toast.error('Session expired. Logging out...', { position: 'top-center' });
       } else {
-        setError(err.response?.data?.error || 'Search failed');
-        toast.error(err.response?.data?.error || 'Search failed', { position: 'top-center' });
+        setError(errorMsg);
+        toast.error(errorMsg, { position: 'top-center' });
       }
     } finally {
       setIsLoading(false);
@@ -100,7 +119,8 @@ function Search({ setError }) {
             {isLoading && bill ? '...' : 'Bill'}
           </button>
         </div>
-        {result && (
+        {isLoading && <p className="text-accent text-center">Searching...</p>}
+        {result && !isLoading && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -109,7 +129,7 @@ function Search({ setError }) {
             {result.type === 'bag' && (
               <>
                 <p><strong>Bag:</strong> {result.data.bag.qrCode} ({result.data.bag.type})</p>
-                {result.data.bag.type === 'parent' && result.data.children && (
+                {result.data.bag.type === 'parent' && result.data.children && result.data.children.length > 0 ? (
                   <>
                     <p><strong>Children:</strong></p>
                     <ul>
@@ -118,7 +138,9 @@ function Search({ setError }) {
                       ))}
                     </ul>
                   </>
-                )}
+                ) : result.data.bag.type === 'parent' ? (
+                  <p>No children linked.</p>
+                ) : null}
                 {result.data.parentQR && <p><strong>Parent:</strong> {result.data.parentQR}</p>}
                 {result.data.billID && <p><strong>Bill ID:</strong> {result.data.billID}</p>}
               </>
@@ -127,24 +149,28 @@ function Search({ setError }) {
               <>
                 <p><strong>Bill ID:</strong> {result.data.billID}</p>
                 <div>
-                  {result.data.bags.map((bag) => (
-                    <div key={bag.id} className="border-b py-1">
-                      <div
-                        className="flex justify-between items-center cursor-pointer"
-                        onClick={() => toggleExpandParent(bag.id)}
-                      >
-                        <span>{bag.qrCode}</span>
-                        <span>{expandedParents[bag.id] ? '▲' : '▼'}</span>
+                  {result.data.bags && result.data.bags.length > 0 ? (
+                    result.data.bags.map((bag) => (
+                      <div key={bag.id} className="border-b py-1">
+                        <div
+                          className="flex justify-between items-center cursor-pointer"
+                          onClick={() => toggleExpandParent(bag.id)}
+                        >
+                          <span>{bag.qrCode}</span>
+                          <span>{expandedParents[bag.id] ? '▲' : '▼'}</span>
+                        </div>
+                        {expandedParents[bag.id] && bag.children && (
+                          <ul className="ml-4">
+                            {bag.children.map((child) => (
+                              <li key={child.id}>{child.qrCode}</li>
+                            ))}
+                          </ul>
+                        )}
                       </div>
-                      {expandedParents[bag.id] && bag.children && (
-                        <ul className="ml-4">
-                          {bag.children.map((child) => (
-                            <li key={child.id}>{child.qrCode}</li>
-                          ))}
-                        </ul>
-                      )}
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p>No bags linked to this bill.</p>
+                  )}
                 </div>
               </>
             )}

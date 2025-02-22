@@ -1,23 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { ArchiveBoxIcon } from '@heroicons/react/24/solid';
 
-function RegisterChildModal({ parent, closeModal, setError }) {
+function RegisterChildModal({ parent, closeModal, setError, token }) {
   const [qr, setQr] = useState('');
   const [currentCount, setCurrentCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!qr) {
+      setError('Child QR code is required');
+      toast.error('Child QR code is required', { position: 'top-center' });
+      return;
+    }
     setIsLoading(true);
     try {
-      const res = await axios.post('http://localhost:8080/api/register-child', {
-        qrCode: qr,
-        type: 'child',
-        parentId: parent.id,
-      });
+      const res = await axios.post(
+        'http://localhost:8080/api/register-child',
+        { qrCode: qr, type: 'child', parentId: parent.id },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       setCurrentCount(res.data.currentCount);
       setQr('');
       if (res.data.currentCount === res.data.capacity) {

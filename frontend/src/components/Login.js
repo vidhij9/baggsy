@@ -1,64 +1,78 @@
-import React from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { SparklesIcon } from '@heroicons/react/24/solid';
 import { toast } from 'react-toastify';
 
-function Login() {
-  const [error, setError] = useState(null); // Initialize error as null
+function Login({ setToken, setRole, setError, logout }) {
+  const [localError, setLocalError] = useState(null);
+  const [username, setUsername] = useState('admin');
+  const [password, setPassword] = useState('password');
 
-  const login = async () => {
-    setError(null); // Clear any previous errors when the login is attempted
-
+  const login = async (e) => {
+    e.preventDefault();
+    console.log("Attempting login to http://localhost:8080/login");
     try {
-      // Simulate an API call or some login logic
-      // Replace this with your actual login logic
-      const response = await simulateLogin(); 
-
-      if (response.success) {
-        // Handle successful login (e.g., redirect)
-        console.log("Login successful!");
-      } else {
-          setError(response.message); //set error from response
-      }
+      const res = await axios.post('http://localhost:8080/login', { username, password });
+      console.log("Login successful:", res.data);
+      setToken(res.data.token);
+      localStorage.setItem('token', res.data.token);
+      const tokenParts = res.data.token.split('.');
+      const payload = JSON.parse(atob(tokenParts[1]));
+      setRole(payload.role);
+      localStorage.setItem('role', payload.role);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
+      toast.success('Logged into Star Agriseeds Baggsy!', { position: 'top-center' });
+      setLocalError(null);
+      setError(null);
     } catch (err) {
-      setError("An unexpected error occurred during login.");
-      console.error(err);
+      const errorMsg = err.response?.data?.error || 'Login failed. Please check backend logs.';
+      console.error("Login error:", err.message, err.response);
+      setLocalError(errorMsg);
+      setError(errorMsg);
+      toast.error(errorMsg, { position: 'top-center' });
+      if (err.response?.status === 401) {
+        logout('Invalid credentials. Please try again.');
+      }
     }
   };
-  //Function to test
-    async function simulateLogin() {
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-  
-      // Simulate a 50% chance of login success
-      const success = Math.random() > 0.5;
-      if (success) {
-        return { success: true };
-      } else {
-        return { success: false, message: "Invalid username or password." };
-      }
-    }
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-96">
-        <h1 className="text-3xl font-bold mb-6 text-center">Login</h1>
-        {/* Your form inputs here */}
-
-        {/* Login Button */}
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-md border-t-4 border-primary"
+    >
+      <div className="flex items-center justify-center mb-6">
+        <SparklesIcon className="w-8 h-8 text-primary mr-2" />
+        <h1 className="text-3xl font-bold text-accent">Star Agriseeds</h1>
+      </div>
+      <form onSubmit={login} className="space-y-4">
+        <input
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="Username"
+          className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-accent"
+          required
+        />
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Password"
+          className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-accent"
+          required
+        />
         <button
-          onClick={login} // Ensure this references the defined login function
+          type="submit"
           className="w-full bg-primary text-white py-3 rounded-lg hover:bg-green-700 transition duration-300 flex items-center justify-center"
         >
           <SparklesIcon className="w-5 h-5 mr-2" />
           Login to Baggsy
         </button>
-
-        {/* Error Display */}
-        {error && <p className="text-red-500 text-center mt-4">{error}</p>}
-      </div>
-    </div>
+      </form>
+      {localError && <p className="text-red-500 text-center mt-4">{localError}</p>}
+    </motion.div>
   );
 }
 

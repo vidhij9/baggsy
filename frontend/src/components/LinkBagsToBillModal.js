@@ -4,24 +4,37 @@ import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { DocumentTextIcon } from '@heroicons/react/24/solid';
 
-function LinkBagsToBillModal({ setError, closeModal }) {
+function LinkBagsToBillModal({ setError, closeModal, token }) {
   const [billID, setBillID] = useState('');
   const [capacity, setCapacity] = useState(1);
   const [parentIDs, setParentIDs] = useState([]);
   const [unlinkedParents, setUnlinkedParents] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [fetchLoading, setFetchLoading] = useState(true);
 
   useEffect(() => {
-    fetchUnlinkedParents();
-  }, []);
+    if (token) {
+      fetchUnlinkedParents();
+    }
+  }, [token]);
 
   const fetchUnlinkedParents = async () => {
+    setFetchLoading(true);
     try {
-      const res = await axios.get('http://localhost:8080/api/unlinked-parents');
-      setUnlinkedParents(res.data);
+      const res = await axios.get('http://localhost:8080/api/unlinked-parents', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      console.log("Unlinked parents response:", res.data);
+      setUnlinkedParents(Array.isArray(res.data) ? res.data : []);
+      setError(null);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to fetch unlinked parents');
-      toast.error(err.response?.data?.error || 'Failed to fetch unlinked parents', { position: 'top-center' });
+      const errorMsg = err.response?.data?.error || 'Failed to fetch unlinked parents';
+      console.error("Fetch unlinked parents error:", err);
+      setUnlinkedParents([]);
+      setError(errorMsg);
+      toast.error(errorMsg, { position: 'top-center' });
+    } finally {
+      setFetchLoading(false);
     }
   };
 
@@ -37,16 +50,22 @@ function LinkBagsToBillModal({ setError, closeModal }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!billID.trim()) {
+      setError('Bill ID is required');
+      toast.error('Bill ID is required', { position: 'top-center' });
+      return;
+    }
     setIsLoading(true);
     try {
-      await axios.post('http://localhost:8080/api/link-bags-to-bill', {
-        billID,
-        parentIDs,
-        capacity,
-      });
+      await axios.post(
+        'http://localhost:8080/api/link-bags-to-bill',
+        { billID, parentIDs, capacity },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       setBillID('');
       setCapacity(1);
       setParentIDs([]);
+      fetchUnlinkedParents(); // Refresh list
       closeModal();
       toast.success('Bags linked to bill successfully!', { position: 'top-center' });
       setError(null);
@@ -85,38 +104,44 @@ function LinkBagsToBillModal({ setError, closeModal }) {
           <input
             type="number"
             value={capacity}
-            onChange={(e) => setCapacity(parseInt(e.target.value) || 1)}
+            onChange={(e) => setCapacity(Math.max(1, parseInt(e.target.value) || 1))}
             min="1"
             placeholder="Number of Parent Bags"
             className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-accent"
             required
           />
           <div className="max-h-40 overflow-y-auto">
-            {unlinkedParents.map((parent) => (
-              <div key={parent.bag.id} className="flex justify-between items-center py-2 border-b">
-                <span>{parent.bag.qrCode}</span>
-                {parentIDs.includes(parent.bag.id) ? (
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveParent(parent.bag.id)}
-                    className="text-red-500 hover:text-red-700"
-                  >
-                    Remove
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => handleAddParent(parent.bag.id)}
-                    disabled={parentIDs.length >= capacity}
-                    className={`text-primary hover:text-green-700 ${
-                      parentIDs.length >= capacity ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
-                  >
-                    Add
-                  </button>
-                )}
-              </div>
-            ))}
+            {fetchLoading ? (
+              <p className="text-accent text-center">Loading unlinked parents...</p>
+            ) : unlinkedParents.length === 0 ? (
+              <p className="text-accent text-center">No unlinked parents found.</p>
+            ) : (
+              unlinkedParents.map((parent) => (
+                <div key={parent.bag.id} className="flex justify-between items-center py-2 border-b">
+                  <span>{parent.bag.qrCode}</span>
+                  {parentIDs.includes(parent.bag.id) ? (
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveParent(parent.bag.id)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      Remove
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleAddParent(parent.bag.id)}
+                      disabled={parentIDs.length >= capacity}
+                      className={`text-primary hover:text-green-700 ${
+                        parentIDs.length >= capacity ? 'opacity-50 cursor-not-allowed' : ''
+                      }`}
+                    >
+                      Add
+                    </button>
+                  )}
+                </div>
+              ))
+            )}
           </div>
           <p className="text-accent">Selected: {parentIDs.length}/{capacity}</p>
           <div className="flex space-x-2">

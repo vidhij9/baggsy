@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"baggsy/backend/internal/db"
 	"baggsy/backend/internal/models"
@@ -22,13 +23,18 @@ func RegisterParentHandler(c *gin.Context) {
 		return
 	}
 
-	// Extract child count from QR code (e.g., "P123-10" means 10 children)
+	// Validate QR code format (e.g., "P123-10")
 	parts := strings.Split(parent.QRCode, "-")
-	if len(parts) > 1 {
-		if count, err := strconv.Atoi(parts[1]); err == nil && count > 0 {
-			parent.ChildCount = count
-		}
+	if len(parts) != 2 || !strings.HasPrefix(parts[0], "P") {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid QR format. Use P<Number>-<ChildCount>"})
+		return
 	}
+	count, err := strconv.Atoi(parts[1])
+	if err != nil || count <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Parent bag must have at least one child"})
+		return
+	}
+	parent.ChildCount = count
 
 	tx := db.DB.Begin()
 	if !tx.Where("qr_code = ?", parent.QRCode).First(&models.Bag{}).RecordNotFound() {
@@ -52,8 +58,8 @@ func RegisterChildHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
-	if child.Type != "child" || child.ParentID == nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Must specify child type and parent ID"})
+	if child.Type != "child" || child.ParentID == nil || child.QRCode == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Must specify child type, parent ID, and QR code"})
 		return
 	}
 
@@ -93,20 +99,36 @@ func ListBagsHandler(c *gin.Context) {
 	startDate := c.Query("startDate")
 	endDate := c.Query("endDate")
 	unlinked := c.Query("unlinked") == "true"
+	page, _ := strconv.Atoi(c.Query("page"))
+	limit, _ := strconv.Atoi(c.Query("limit"))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 10
+	}
+	offset := (page - 1) * limit
 
 	query := db.DB.Model(&models.Bag{})
-	if bagType != "" {
+	if bagType != "" && (bagType == "parent" || bagType == "child") {
 		query = query.Where("type = ?", bagType)
 	}
 	if startDate != "" && endDate != "" {
-		query = query.Where("created_at BETWEEN ? AND ?", startDate, endDate)
+		if _, err := time.Parse("2006-01-02", startDate); err == nil {
+			if _, err := time.Parse("2006-01-02", endDate); err == nil {
+				query = query.Where("created_at BETWEEN ? AND ?", startDate, endDate)
+			}
+		}
 	}
 	if unlinked {
 		query = query.Where("linked = false AND type = 'parent'")
 	}
 
+	var total int64
+	query.Count(&total)
+
 	var bags []models.Bag
-	if err := query.Find(&bags).Error; err != nil {
+	if err := query.Offset(offset).Limit(limit).Find(&bags).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list bags"})
 		return
 	}
@@ -131,8 +153,9 @@ func ListBagsHandler(c *gin.Context) {
 			}
 		} else if bag.ParentID != nil {
 			var parent models.Bag
-			db.DB.First(&parent, *bag.ParentID)
-			resp.ParentQR = parent.QRCode
+			if err := db.DB.First(&parent, *bag.ParentID).Error; err == nil {
+				resp.ParentQR = parent.QRCode
+			}
 			var link models.Link
 			if db.DB.Where("parent_id = ?", *bag.ParentID).First(&link).Error == nil {
 				resp.BillID = link.BillID
@@ -141,12 +164,26 @@ func ListBagsHandler(c *gin.Context) {
 		response = append(response, resp)
 	}
 
+	c.Header("X-Total-Count", strconv.FormatInt(total, 10))
 	c.JSON(http.StatusOK, response)
 }
 
 func ListUnlinkedParentsHandler(c *gin.Context) {
+	page, _ := strconv.Atoi(c.Query("page"))
+	limit, _ := strconv.Atoi(c.Query("limit"))
+	if page < 1 {
+		page = 1
+	}
+	if limit < 1 {
+		limit = 10
+	}
+	offset := (page - 1) * limit
+
+	var total int64
+	db.DB.Model(&models.Bag{}).Where("type = 'parent' AND linked = false").Count(&total)
+
 	var parents []models.Bag
-	if err := db.DB.Where("type = 'parent' AND linked = false").Find(&parents).Error; err != nil {
+	if err := db.DB.Where("type = 'parent' AND linked = false").Offset(offset).Limit(limit).Find(&parents).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list unlinked parents"})
 		return
 	}
@@ -163,6 +200,7 @@ func ListUnlinkedParentsHandler(c *gin.Context) {
 		response = append(response, ParentResponse{Bag: parent, Children: children})
 	}
 
+	c.Header("X-Total-Count", strconv.FormatInt(total, 10))
 	c.JSON(http.StatusOK, response)
 }
 
@@ -170,7 +208,7 @@ func FindChildBagsByParentQRHandler(c *gin.Context) {
 	parentQR := c.Param("parentQR")
 	var parent models.Bag
 	if err := db.DB.Where("qr_code = ?", parentQR).First(&parent).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Parent bag not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "Parent bag not found with QR: " + parentQR})
 		return
 	}
 
@@ -191,9 +229,13 @@ func FindChildBagsByParentQRHandler(c *gin.Context) {
 
 func SearchBagByQRHandler(c *gin.Context) {
 	qr := c.Param("qr")
+	if qr == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "QR code is required"})
+		return
+	}
 	var bag models.Bag
-	if err := db.DB.Where("qr_code = ?", qr).First(&bag).Error; err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Bag not found"})
+	if err := db.DB.Where("lower(qr_code) = lower(?)", qr).First(&bag).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Bag not found with QR: " + qr})
 		return
 	}
 
@@ -214,8 +256,9 @@ func SearchBagByQRHandler(c *gin.Context) {
 		}
 	} else if bag.ParentID != nil {
 		var parent models.Bag
-		db.DB.First(&parent, *bag.ParentID)
-		response.ParentQR = parent.QRCode
+		if err := db.DB.First(&parent, *bag.ParentID).Error; err == nil {
+			response.ParentQR = parent.QRCode
+		}
 		var link models.Link
 		if db.DB.Where("parent_id = ?", *bag.ParentID).First(&link).Error == nil {
 			response.BillID = link.BillID
