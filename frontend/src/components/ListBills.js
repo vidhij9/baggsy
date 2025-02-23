@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { DocumentTextIcon } from '@heroicons/react/24/solid';
 
-function ListBills({ setError, token }) {
+function ListBills({ setError, token, refresh }) {
   const [bills, setBills] = useState([]);
   const [expanded, setExpanded] = useState({});
   const [expandedParents, setExpandedParents] = useState({});
@@ -17,7 +17,7 @@ function ListBills({ setError, token }) {
     if (token) {
       fetchBills();
     }
-  }, [token, page]);
+  }, [token, page, refresh]); // Add refresh to dependencies
 
   const fetchBills = async () => {
     setLoading(true);

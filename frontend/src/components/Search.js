@@ -3,25 +3,38 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/solid';
+import jsQR from 'jsqr';
 
 function Search({ setError, token }) {
-  const [qr, setQr] = useState('');
   const [bill, setBill] = useState('');
   const [result, setResult] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [expandedParents, setExpandedParents] = useState({});
+  const [photoPreview, setPhotoPreview] = useState(null);
 
-  const validateQR = (qrCode) => qrCode.trim().length > 0;
   const validateBill = (billID) => billID.trim().length > 0;
 
-  const searchByQr = async () => {
-    if (!validateQR(qr)) {
-      setError('Invalid QR code');
-      toast.error('Invalid QR code', { position: 'top-center' });
-      return;
-    }
+  const handlePhotoCaptureForQR = async () => {
     setIsLoading(true);
     try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.play();
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 480;
+      const context = canvas.getContext('2d');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      stream.getTracks().forEach(track => track.stop());
+      setPhotoPreview(canvas.toDataURL('image/png'));
+      if (!code) {
+        throw new Error('No QR code detected in photo');
+      }
+      const qr = code.data;
       const res = await axios.get(`http://localhost:8080/api/bag/${encodeURIComponent(qr)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -29,7 +42,7 @@ function Search({ setError, token }) {
       setError(null);
       toast.success('Bag found!', { position: 'top-center' });
     } catch (err) {
-      const errorMsg = err.response?.data?.error || 'Search failed';
+      const errorMsg = err.response?.data?.error || err.message || 'Search failed';
       if (err.response?.status === 401) {
         setError('Session expired. Please log in again.');
         toast.error('Session expired. Logging out...', { position: 'top-center' });
@@ -39,6 +52,7 @@ function Search({ setError, token }) {
       }
     } finally {
       setIsLoading(false);
+      setPhotoPreview(null);
     }
   };
 
@@ -85,39 +99,45 @@ function Search({ setError, token }) {
         Search
       </h2>
       <div className="space-y-4">
-        <div className="flex space-x-2">
-          <input
-            value={qr}
-            onChange={(e) => setQr(e.target.value)}
-            placeholder="Bag QR"
-            className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-accent"
-          />
+        <div className="space-y-2">
           <button
-            onClick={searchByQr}
-            disabled={isLoading || !qr}
-            className={`py-2 px-4 rounded-lg text-white ${
-              isLoading || !qr ? 'bg-gray-400' : 'bg-primary hover:bg-green-700'
+            onClick={handlePhotoCaptureForQR}
+            disabled={isLoading}
+            className={`w-full py-3 rounded-lg text-white flex items-center justify-center ${
+              isLoading ? 'bg-gray-400' : 'bg-primary hover:bg-green-700'
             } transition duration-300`}
           >
-            {isLoading && qr ? '...' : 'QR'}
+            {isLoading ? (
+              <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+              </svg>
+            ) : (
+              <MagnifyingGlassIcon className="w-5 h-5 mr-2" />
+            )}
+            Take Photo to Search Bag
           </button>
-        </div>
-        <div className="flex space-x-2">
-          <input
-            value={bill}
-            onChange={(e) => setBill(e.target.value)}
-            placeholder="Bill ID"
-            className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-accent"
-          />
-          <button
-            onClick={searchByBill}
-            disabled={isLoading || !bill}
-            className={`py-2 px-4 rounded-lg text-white ${
-              isLoading || !bill ? 'bg-gray-400' : 'bg-secondary hover:bg-yellow-600'
-            } transition duration-300`}
-          >
-            {isLoading && bill ? '...' : 'Bill'}
-          </button>
+          {photoPreview && (
+            <img src={photoPreview} alt="Captured QR" className="w-full rounded-lg" />
+          )}
+          <div className="flex space-x-2">
+            <input
+              value={bill}
+              onChange={(e) => setBill(e.target.value)}
+              placeholder="Bill ID"
+              className="w-full p-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-accent"
+              disabled={isLoading}
+            />
+            <button
+              onClick={searchByBill}
+              disabled={isLoading || !bill}
+              className={`py-2 px-4 rounded-lg text-white ${
+                isLoading || !bill ? 'bg-gray-400' : 'bg-secondary hover:bg-yellow-600'
+              } transition duration-300`}
+            >
+              {isLoading && bill ? '...' : 'Bill'}
+            </button>
+          </div>
         </div>
         {isLoading && <p className="text-accent text-center">Searching...</p>}
         {result && !isLoading && (

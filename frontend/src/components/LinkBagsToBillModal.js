@@ -1,51 +1,85 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { DocumentTextIcon } from '@heroicons/react/24/solid';
+import jsQR from 'jsqr';
 
-function LinkBagsToBillModal({ setError, closeModal, token }) {
+function LinkBagsToBillModal({ setError, closeModal, token, onSuccess }) {
   const [billID, setBillID] = useState('');
   const [capacity, setCapacity] = useState(1);
   const [parentIDs, setParentIDs] = useState([]);
-  const [unlinkedParents, setUnlinkedParents] = useState([]);
+  const [linkingParents, setLinkingParents] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [fetchLoading, setFetchLoading] = useState(true);
+  const [photoPreview, setPhotoPreview] = useState(null);
 
-  useEffect(() => {
-    if (token) {
-      fetchUnlinkedParents();
-    }
-  }, [token]);
-
-  const fetchUnlinkedParents = async () => {
-    setFetchLoading(true);
+  const validateQR = async (qr) => {
     try {
-      const res = await axios.get('http://localhost:8080/api/unlinked-parents', {
+      const res = await axios.get(`http://localhost:8080/api/bag/${encodeURIComponent(qr)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      console.log("Unlinked parents response:", res.data);
-      setUnlinkedParents(Array.isArray(res.data) ? res.data : []);
+      const bag = res.data.bag;
+      if (bag.type !== 'parent') {
+        throw new Error('Only parent bags can be linked');
+      }
+      if (bag.linked) {
+        throw new Error('This parent bag is already linked to a bill');
+      }
+      return bag.id;
+    } catch (err) {
+      throw new Error(err.response?.data?.error || err.message || 'Invalid or unavailable parent bag');
+    }
+  };
+
+  const handlePhotoCapture = async () => {
+    setIsLoading(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.play();
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 480;
+      const context = canvas.getContext('2d');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      stream.getTracks().forEach(track => track.stop());
+      setPhotoPreview(canvas.toDataURL('image/png'));
+      if (!code) {
+        throw new Error('No QR code detected in photo');
+      }
+      const qrCode = code.data;
+      const parentId = await validateQR(qrCode);
+      if (parentIDs.includes(parentId)) {
+        throw new Error('This parent bag is already added');
+      }
+      if (parentIDs.length >= capacity) {
+        throw new Error('Capacity reached');
+      }
+      setParentIDs([...parentIDs, parentId]);
+      setLinkingParents([...linkingParents, qrCode]);
+      toast.success(`Added ${qrCode} (${parentIDs.length + 1}/${capacity})`, { position: 'top-center' });
       setError(null);
     } catch (err) {
-      const errorMsg = err.response?.data?.error || 'Failed to fetch unlinked parents';
-      console.error("Fetch unlinked parents error:", err);
-      setUnlinkedParents([]);
-      setError(errorMsg);
-      toast.error(errorMsg, { position: 'top-center' });
+      setError(err.message);
+      toast.error(err.message, { position: 'top-center' });
     } finally {
-      setFetchLoading(false);
+      setIsLoading(false);
+      setPhotoPreview(null);
     }
   };
 
-  const handleAddParent = (id) => {
-    if (parentIDs.length < capacity && !parentIDs.includes(id)) {
-      setParentIDs([...parentIDs, id]);
-    }
-  };
-
-  const handleRemoveParent = (id) => {
-    setParentIDs(parentIDs.filter((pid) => pid !== id));
+  const handleRemoveParent = (index) => {
+    const newParentIDs = [...parentIDs];
+    const newLinkingParents = [...linkingParents];
+    newParentIDs.splice(index, 1);
+    newLinkingParents.splice(index, 1);
+    setParentIDs(newParentIDs);
+    setLinkingParents(newLinkingParents);
+    toast.info(`Removed ${linkingParents[index]}`, { position: 'top-center' });
   };
 
   const handleSubmit = async (e) => {
@@ -55,27 +89,36 @@ function LinkBagsToBillModal({ setError, closeModal, token }) {
       toast.error('Bill ID is required', { position: 'top-center' });
       return;
     }
+    if (parentIDs.length !== capacity) {
+      setError(`Please add exactly ${capacity} parent bag${capacity > 1 ? 's' : ''}`);
+      toast.error(`Please add exactly ${capacity} parent bag${capacity > 1 ? 's' : ''}`, { position: 'top-center' });
+      return;
+    }
     setIsLoading(true);
     try {
-      await axios.post(
+      const response = await axios.post(
         'http://localhost:8080/api/link-bags-to-bill',
         { billID, parentIDs, capacity },
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      console.log("Link response:", response.data);
       setBillID('');
       setCapacity(1);
       setParentIDs([]);
-      fetchUnlinkedParents(); // Refresh list
-      closeModal();
-      toast.success('Bags linked to bill successfully!', { position: 'top-center' });
+      setLinkingParents([]);
       setError(null);
+      onSuccess();
+      toast.success('Bags linked to bill successfully!', { position: 'top-center' });
+      closeModal();
     } catch (err) {
+      const errorMsg = err.response?.data?.error || 'Linking failed';
+      console.error("Link error:", err.response || err);
       if (err.response?.status === 401) {
         setError('Session expired. Please log in again.');
         toast.error('Session expired. Logging out...', { position: 'top-center' });
       } else {
-        setError(err.response?.data?.error || 'Linking failed');
-        toast.error(err.response?.data?.error || 'Linking failed', { position: 'top-center' });
+        setError(errorMsg);
+        toast.error(errorMsg, { position: 'top-center' });
       }
     } finally {
       setIsLoading(false);
@@ -100,6 +143,7 @@ function LinkBagsToBillModal({ setError, closeModal, token }) {
             placeholder="Bill ID"
             className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-accent"
             required
+            disabled={isLoading}
           />
           <input
             type="number"
@@ -109,38 +153,46 @@ function LinkBagsToBillModal({ setError, closeModal, token }) {
             placeholder="Number of Parent Bags"
             className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-accent"
             required
+            disabled={isLoading || parentIDs.length > 0}
           />
-          <div className="max-h-40 overflow-y-auto">
-            {fetchLoading ? (
-              <p className="text-accent text-center">Loading unlinked parents...</p>
-            ) : unlinkedParents.length === 0 ? (
-              <p className="text-accent text-center">No unlinked parents found.</p>
-            ) : (
-              unlinkedParents.map((parent) => (
-                <div key={parent.bag.id} className="flex justify-between items-center py-2 border-b">
-                  <span>{parent.bag.qrCode}</span>
-                  {parentIDs.includes(parent.bag.id) ? (
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={handlePhotoCapture}
+              disabled={isLoading || parentIDs.length >= capacity}
+              className={`w-full py-3 rounded-lg text-white flex items-center justify-center ${
+                isLoading || parentIDs.length >= capacity ? 'bg-gray-400' : 'bg-primary hover:bg-green-700'
+              } transition duration-300`}
+            >
+              {isLoading ? (
+                <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+              ) : (
+                <DocumentTextIcon className="w-5 h-5 mr-2" />
+              )}
+              Take Photo to Add Parent Bag
+            </button>
+            {photoPreview && (
+              <img src={photoPreview} alt="Captured QR" className="w-full rounded-lg" />
+            )}
+            {linkingParents.length > 0 && (
+              <div className="max-h-40 overflow-y-auto">
+                {linkingParents.map((qr, index) => (
+                  <div key={qr} className="flex justify-between items-center py-2 border-b">
+                    <span>{qr}</span>
                     <button
                       type="button"
-                      onClick={() => handleRemoveParent(parent.bag.id)}
+                      onClick={() => handleRemoveParent(index)}
                       className="text-red-500 hover:text-red-700"
+                      disabled={isLoading}
                     >
                       Remove
                     </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => handleAddParent(parent.bag.id)}
-                      disabled={parentIDs.length >= capacity}
-                      className={`text-primary hover:text-green-700 ${
-                        parentIDs.length >= capacity ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
-                    >
-                      Add
-                    </button>
-                  )}
-                </div>
-              ))
+                  </div>
+                ))}
+              </div>
             )}
           </div>
           <p className="text-accent">Selected: {parentIDs.length}/{capacity}</p>
@@ -166,6 +218,7 @@ function LinkBagsToBillModal({ setError, closeModal, token }) {
               type="button"
               onClick={closeModal}
               className="flex-1 py-3 rounded-lg bg-gray-300 text-accent hover:bg-gray-400 transition duration-300"
+              disabled={isLoading}
             >
               Cancel
             </button>

@@ -3,28 +3,43 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { ArchiveBoxIcon } from '@heroicons/react/24/solid';
+import jsQR from 'jsqr';
 
 function RegisterChildModal({ parent, closeModal, setError, token }) {
-  const [qr, setQr] = useState('');
   const [currentCount, setCurrentCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [photoPreview, setPhotoPreview] = useState(null);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!qr) {
-      setError('Child QR code is required');
-      toast.error('Child QR code is required', { position: 'top-center' });
-      return;
-    }
+  const handlePhotoCapture = async () => {
     setIsLoading(true);
     try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.play();
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 480;
+      const context = canvas.getContext('2d');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      stream.getTracks().forEach(track => track.stop());
+      setPhotoPreview(canvas.toDataURL('image/png'));
+      if (!code) {
+        throw new Error('No QR code detected in photo');
+      }
+      const qr = code.data;
+      if (!qr) {
+        throw new Error('Child QR code is required');
+      }
       const res = await axios.post(
         'http://localhost:8080/api/register-child',
         { qrCode: qr, type: 'child', parentId: parent.id },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       setCurrentCount(res.data.currentCount);
-      setQr('');
       if (res.data.currentCount === res.data.capacity) {
         closeModal();
         toast.success('All child bags registered! Parent bag completed.', { position: 'top-center' });
@@ -37,11 +52,12 @@ function RegisterChildModal({ parent, closeModal, setError, token }) {
         setError('Session expired. Please log in again.');
         toast.error('Session expired. Logging out...', { position: 'top-center' });
       } else {
-        setError(err.response?.data?.error || 'Registration failed');
-        toast.error(err.response?.data?.error || 'Registration failed', { position: 'top-center' });
+        setError(err.message || err.response?.data?.error || 'Registration failed');
+        toast.error(err.message || err.response?.data?.error || 'Registration failed', { position: 'top-center' });
       }
     } finally {
       setIsLoading(false);
+      setPhotoPreview(null);
     }
   };
 
@@ -59,24 +75,9 @@ function RegisterChildModal({ parent, closeModal, setError, token }) {
         <p className="text-accent mb-4">
           Current: {currentCount}/{parent.childCount}
         </p>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            value={qr}
-            onChange={(e) => setQr(e.target.value)}
-            placeholder="Scan Child QR"
-            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-accent"
-            required
-          />
-          <div className="w-full bg-gray-200 rounded-full h-3">
-            <motion.div
-              className="bg-primary h-3 rounded-full"
-              initial={{ width: 0 }}
-              animate={{ width: `${(currentCount / parent.childCount) * 100}%` }}
-              transition={{ duration: 0.5 }}
-            />
-          </div>
+        <div className="space-y-4">
           <button
-            type="submit"
+            onClick={handlePhotoCapture}
             disabled={isLoading}
             className={`w-full py-3 rounded-lg text-white flex items-center justify-center ${
               isLoading ? 'bg-gray-400' : 'bg-primary hover:bg-green-700'
@@ -90,9 +91,20 @@ function RegisterChildModal({ parent, closeModal, setError, token }) {
             ) : (
               <ArchiveBoxIcon className="w-5 h-5 mr-2" />
             )}
-            Register Child
+            Take Photo to Register Child
           </button>
-        </form>
+          {photoPreview && (
+            <img src={photoPreview} alt="Captured QR" className="w-full rounded-lg" />
+          )}
+          <div className="w-full bg-gray-200 rounded-full h-3">
+            <motion.div
+              className="bg-primary h-3 rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${(currentCount / parent.childCount) * 100}%` }}
+              transition={{ duration: 0.5 }}
+            />
+          </div>
+        </div>
       </div>
     </motion.div>
   );

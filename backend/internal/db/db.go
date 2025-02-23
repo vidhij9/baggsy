@@ -21,11 +21,10 @@ func InitDB() (*gorm.DB, error) {
 	}
 
 	sqlDB := DB.DB()
-	sqlDB.SetMaxOpenConns(100)
-	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetMaxOpenConns(200) // Increase for 100+ users
+	sqlDB.SetMaxIdleConns(50)  // Keep idle connections
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	// Explicitly create ENUM types and tables
 	fmt.Println("Creating ENUM types and schema...")
 	err = DB.Exec(`
 		DO $$ BEGIN
@@ -44,7 +43,10 @@ func InitDB() (*gorm.DB, error) {
 			id SERIAL PRIMARY KEY,
 			username VARCHAR(255) UNIQUE NOT NULL,
 			password_hash VARCHAR(255) NOT NULL,
-			role user_role NOT NULL
+			email VARCHAR(255) UNIQUE NOT NULL,
+			role user_role NOT NULL,
+			verification_token VARCHAR(255),
+			verified BOOLEAN DEFAULT FALSE
 		);
 
 		CREATE TABLE IF NOT EXISTS bags (
@@ -74,26 +76,26 @@ func InitDB() (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to create schema: %v", err)
 	}
 
-	// AutoMigrate to ensure GORM models align with schema
 	fmt.Println("Running AutoMigrate for model consistency...")
 	err = DB.AutoMigrate(&models.User{}, &models.Bag{}, &models.Link{}).Error
 	if err != nil {
 		return nil, fmt.Errorf("failed to auto-migrate: %v", err)
 	}
 
-	// Create initial admin user
 	var admin models.User
 	if err := DB.Where("username = ?", "admin").First(&admin).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
 			fmt.Println("Creating initial admin user...")
-			hash, err := bcrypt.GenerateFromPassword([]byte("password"), bcrypt.DefaultCost)
+			hash, err := bcrypt.GenerateFromPassword([]byte("Admin123"), bcrypt.DefaultCost)
 			if err != nil {
 				return nil, fmt.Errorf("failed to hash password: %v", err)
 			}
 			adminUser := models.User{
 				Username:     "admin",
 				PasswordHash: string(hash),
+				Email:        "admin@example.com",
 				Role:         "admin",
+				Verified:     true,
 			}
 			if err := DB.Create(&adminUser).Error; err != nil {
 				return nil, fmt.Errorf("failed to create admin user: %v", err)

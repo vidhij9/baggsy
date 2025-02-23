@@ -109,7 +109,7 @@ func ListBagsHandler(c *gin.Context) {
 	}
 	offset := (page - 1) * limit
 
-	query := db.DB.Model(&models.Bag{})
+	query := db.DB.Model(&models.Bag{}).Preload("Children")
 	if bagType != "" && (bagType == "parent" || bagType == "child") {
 		query = query.Where("type = ?", bagType)
 	}
@@ -144,9 +144,7 @@ func ListBagsHandler(c *gin.Context) {
 	for _, bag := range bags {
 		resp := BagResponse{Bag: bag}
 		if bag.Type == "parent" {
-			var children []models.Bag
-			db.DB.Where("parent_id = ?", bag.ID).Find(&children)
-			resp.Children = children
+			resp.Children = bag.Children
 			var link models.Link
 			if db.DB.Where("parent_id = ?", bag.ID).First(&link).Error == nil {
 				resp.BillID = link.BillID

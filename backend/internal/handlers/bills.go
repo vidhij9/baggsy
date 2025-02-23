@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -18,6 +19,7 @@ func LinkBagsToBillHandler(c *gin.Context) {
 		Capacity  int    `json:"capacity" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&req); err != nil {
+		fmt.Println("Invalid input:", err)
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input"})
 		return
 	}
@@ -36,11 +38,13 @@ func LinkBagsToBillHandler(c *gin.Context) {
 		var bag models.Bag
 		if err := tx.First(&bag, parentID).Error; err != nil {
 			tx.Rollback()
+			fmt.Println("Parent not found:", parentID)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Parent bag not found"})
 			return
 		}
 		if bag.Linked {
 			tx.Rollback()
+			fmt.Println("Bag already linked:", parentID)
 			c.JSON(http.StatusConflict, gin.H{"error": "Bag already linked"})
 			return
 		}
@@ -48,16 +52,19 @@ func LinkBagsToBillHandler(c *gin.Context) {
 		link := models.Link{ParentID: parentID, BillID: req.BillID}
 		if err := tx.Create(&link).Error; err != nil {
 			tx.Rollback()
+			fmt.Println("Failed to link bag:", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to link bag"})
 			return
 		}
 		if err := tx.Model(&bag).Update("linked", true).Error; err != nil {
 			tx.Rollback()
+			fmt.Println("Failed to update bag status:", err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update bag status"})
 			return
 		}
 	}
 	tx.Commit()
+	fmt.Println("Bags linked successfully to bill:", req.BillID)
 	c.JSON(http.StatusOK, gin.H{"message": "Bags linked successfully"})
 }
 

@@ -4,12 +4,13 @@ import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { ArchiveBoxIcon } from '@heroicons/react/24/solid';
 import RegisterChildModal from './RegisterChildModal';
+import jsQR from 'jsqr';
 
 function RegisterParent({ setError, token }) {
-  const [qr, setQr] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showChildModal, setShowChildModal] = useState(false);
   const [parentData, setParentData] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState(null);
 
   const validateQR = (qrCode) => {
     const parts = qrCode.split('-');
@@ -18,15 +19,30 @@ function RegisterParent({ setError, token }) {
     return !isNaN(count) && count > 0;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validateQR(qr)) {
-      setError('Invalid QR format. Use P<Number>-<ChildCount> (e.g., P123-10)');
-      toast.error('Invalid QR format. Use P<Number>-<ChildCount> (e.g., P123-10)', { position: 'top-center' });
-      return;
-    }
+  const handlePhotoCapture = async () => {
     setIsLoading(true);
     try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const video = document.createElement('video');
+      video.srcObject = stream;
+      video.play();
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 480;
+      const context = canvas.getContext('2d');
+      await new Promise(resolve => setTimeout(resolve, 1000)); // Wait for video to stabilize
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const code = jsQR(imageData.data, imageData.width, imageData.height);
+      stream.getTracks().forEach(track => track.stop());
+      setPhotoPreview(canvas.toDataURL('image/png'));
+      if (!code) {
+        throw new Error('No QR code detected in photo');
+      }
+      const qr = code.data;
+      if (!validateQR(qr)) {
+        throw new Error('Invalid QR format. Use P<Number>-<ChildCount> (e.g., P123-10)');
+      }
       const res = await axios.post(
         'http://localhost:8080/api/register-parent',
         { qrCode: qr, type: 'parent' },
@@ -37,7 +53,6 @@ function RegisterParent({ setError, token }) {
       }
       setParentData(res.data);
       setShowChildModal(true);
-      setQr('');
       toast.success('Parent seed bag registered! Now add child bags.', { position: 'top-center' });
       setError(null);
     } catch (err) {
@@ -45,11 +60,12 @@ function RegisterParent({ setError, token }) {
         setError('Session expired. Please log in again.');
         toast.error('Session expired. Logging out...', { position: 'top-center' });
       } else {
-        setError(err.response?.data?.error || err.message || 'Registration failed');
-        toast.error(err.response?.data?.error || err.message || 'Registration failed', { position: 'top-center' });
+        setError(err.message || err.response?.data?.error || 'Registration failed');
+        toast.error(err.message || err.response?.data?.error || 'Registration failed', { position: 'top-center' });
       }
     } finally {
       setIsLoading(false);
+      setPhotoPreview(null);
     }
   };
 
@@ -64,16 +80,9 @@ function RegisterParent({ setError, token }) {
           <ArchiveBoxIcon className="w-6 h-6 text-primary mr-2" />
           Register Parent Bag
         </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            value={qr}
-            onChange={(e) => setQr(e.target.value)}
-            placeholder="Scan Parent QR (e.g., P123-10)"
-            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-accent"
-            required
-          />
+        <div className="space-y-4">
           <button
-            type="submit"
+            onClick={handlePhotoCapture}
             disabled={isLoading}
             className={`w-full py-3 rounded-lg text-white flex items-center justify-center ${
               isLoading ? 'bg-gray-400' : 'bg-primary hover:bg-green-700'
@@ -87,9 +96,12 @@ function RegisterParent({ setError, token }) {
             ) : (
               <ArchiveBoxIcon className="w-5 h-5 mr-2" />
             )}
-            Register Parent
+            Take Photo to Register Parent
           </button>
-        </form>
+          {photoPreview && (
+            <img src={photoPreview} alt="Captured QR" className="w-full rounded-lg" />
+          )}
+        </div>
       </motion.div>
       {showChildModal && parentData && (
         <RegisterChildModal

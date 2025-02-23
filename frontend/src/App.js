@@ -15,13 +15,16 @@ function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [role, setRole] = useState(localStorage.getItem('role'));
   const [error, setError] = useState(null);
-  const [view, setView] = useState('register');
+  const [view, setView] = useState('login');
   const [showLinkModal, setShowLinkModal] = useState(false);
+  const [refreshBills, setRefreshBills] = useState(false);
 
   useEffect(() => {
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       validateToken();
+    } else {
+      setView('login');
     }
   }, [token]);
 
@@ -40,36 +43,52 @@ function App() {
   };
 
   const logout = (message = 'Logged out successfully.') => {
+    if (!window.confirm('Are you sure you want to log out?')) return;
     setToken(null);
     setRole(null);
     localStorage.removeItem('token');
     localStorage.removeItem('role');
     delete axios.defaults.headers.common['Authorization'];
     toast.info(message, { position: 'top-center' });
+    setView('login');
+    setError(null);
+  };
+
+  const handleLinkSuccess = () => {
+    setRefreshBills((prev) => !prev);
+  };
+
+  const switchView = (newView) => {
+    setView(newView);
+    setError(null);
   };
 
   const renderView = () => {
     switch (view) {
+      case 'login':
+        return <Login setToken={setToken} setRole={setRole} setError={setError} logout={logout} switchView={switchView} />;
       case 'register':
         return <RegisterParent setError={setError} token={token} />;
       case 'listBags':
         return role === 'admin' ? <ListBags setError={setError} token={token} /> : <p className="text-red-500">Unauthorized</p>;
       case 'listBills':
-        return role === 'admin' ? <ListBills setError={setError} token={token} /> : <p className="text-red-500">Unauthorized</p>;
+        return role === 'admin' ? (
+          <ListBills setError={setError} token={token} refresh={refreshBills} />
+        ) : (
+          <p className="text-red-500">Unauthorized</p>
+        );
       case 'search':
         return role === 'admin' ? <Search setError={setError} token={token} /> : <p className="text-red-500">Unauthorized</p>;
       default:
-        return <RegisterParent setError={setError} token={token} />;
+        return <Login setToken={setToken} setRole={setRole} setError={setError} logout={logout} switchView={switchView} />;
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4">
       <ToastContainer />
-      {!token ? (
-        <Login setToken={setToken} setRole={setRole} setError={setError} logout={logout} />
-      ) : (
-        <div className="w-full max-w-5xl">
+      <div className="w-full max-w-5xl">
+        {token && (
           <motion.header
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -81,7 +100,7 @@ function App() {
             </div>
             <div className="flex space-x-4">
               <button
-                onClick={() => setView('register')}
+                onClick={() => switchView('register')}
                 className={`py-2 px-4 rounded-lg ${view === 'register' ? 'bg-primary text-white' : 'bg-gray-200'}`}
               >
                 Register
@@ -89,19 +108,19 @@ function App() {
               {role === 'admin' && (
                 <>
                   <button
-                    onClick={() => setView('listBags')}
+                    onClick={() => switchView('listBags')}
                     className={`py-2 px-4 rounded-lg ${view === 'listBags' ? 'bg-primary text-white' : 'bg-gray-200'}`}
                   >
                     List Bags
                   </button>
                   <button
-                    onClick={() => setView('listBills')}
+                    onClick={() => switchView('listBills')}
                     className={`py-2 px-4 rounded-lg ${view === 'listBills' ? 'bg-primary text-white' : 'bg-gray-200'}`}
                   >
                     List Bills
                   </button>
                   <button
-                    onClick={() => setView('search')}
+                    onClick={() => switchView('search')}
                     className={`py-2 px-4 rounded-lg ${view === 'search' ? 'bg-primary text-white' : 'bg-gray-200'}`}
                   >
                     Search
@@ -124,13 +143,18 @@ function App() {
               </button>
             </div>
           </motion.header>
-          {error && <p className="text-red-500 text-center mb-6">{error}</p>}
-          {renderView()}
-          {showLinkModal && (
-            <LinkBagsToBillModal setError={setError} closeModal={() => setShowLinkModal(false)} token={token} />
-          )}
-        </div>
-      )}
+        )}
+        {error && <p className="text-red-500 text-center mb-6">{error}</p>}
+        {renderView()}
+        {showLinkModal && (
+          <LinkBagsToBillModal
+            setError={setError}
+            closeModal={() => setShowLinkModal(false)}
+            token={token}
+            onSuccess={handleLinkSuccess}
+          />
+        )}
+      </div>
     </div>
   );
 }
