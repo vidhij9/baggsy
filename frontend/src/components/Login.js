@@ -30,7 +30,7 @@ function Login({ setToken, setRole, setError, logout, switchView }) {
       setError(null);
       switchView('register'); // Default view after login
     } catch (err) {
-      const errorMsg = err.response?.data?.error || 'Login failed. Please check backend logs.';
+      const errorMsg = err.response?.data?.error || 'Login failed.';
       console.error("Login error:", err.message, err.response);
       setLocalError(errorMsg);
       setError(errorMsg);
