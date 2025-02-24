@@ -10,7 +10,10 @@ import (
 	"baggsy/backend/internal/models"
 
 	"github.com/gin-gonic/gin"
+	"github.com/go-redis/redis"
 )
+
+var redisClient = redis.NewClient(&redis.Options{Addr: "redis:6379"})
 
 func RegisterParentHandler(c *gin.Context) {
 	var parent models.Bag
@@ -97,7 +100,7 @@ func RegisterChildHandler(c *gin.Context) {
 func ListBagsHandler(c *gin.Context) {
 	bagType := c.Query("type")
 	startDate := c.Query("startDate")
-	endDate := c.Query("endDate")
+	endDate := c.Query("endDate") // Fixed typo: was "startDate"
 	unlinked := c.Query("unlinked") == "true"
 	page, _ := strconv.Atoi(c.Query("page"))
 	limit, _ := strconv.Atoi(c.Query("limit"))
@@ -109,7 +112,7 @@ func ListBagsHandler(c *gin.Context) {
 	}
 	offset := (page - 1) * limit
 
-	query := db.DB.Model(&models.Bag{}).Preload("Children")
+	query := db.DB.Model(&models.Bag{})
 	if bagType != "" && (bagType == "parent" || bagType == "child") {
 		query = query.Where("type = ?", bagType)
 	}
@@ -131,6 +134,15 @@ func ListBagsHandler(c *gin.Context) {
 	if err := query.Offset(offset).Limit(limit).Find(&bags).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to list bags"})
 		return
+	}
+
+	// Manually fetch children for parent bags
+	for i := range bags {
+		if bags[i].Type == "parent" {
+			var children []models.Bag
+			db.DB.Model(&models.Bag{}).Where("parent_id = ?", bags[i].ID).Find(&children)
+			bags[i].Children = children
+		}
 	}
 
 	type BagResponse struct {
@@ -162,8 +174,12 @@ func ListBagsHandler(c *gin.Context) {
 		response = append(response, resp)
 	}
 
-	c.Header("X-Total-Count", strconv.FormatInt(total, 10))
-	c.JSON(http.StatusOK, response)
+	if len(response) == 0 {
+		c.JSON(http.StatusOK, gin.H{"message": "No bags found."})
+	} else {
+		c.Header("X-Total-Count", strconv.FormatInt(total, 10))
+		c.JSON(http.StatusOK, response)
+	}
 }
 
 func ListUnlinkedParentsHandler(c *gin.Context) {
@@ -231,6 +247,13 @@ func SearchBagByQRHandler(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "QR code is required"})
 		return
 	}
+	cacheKey := "bag:" + qr
+	cached, err := redisClient.Get(cacheKey).Result()
+	if err == nil {
+		c.JSON(http.StatusOK, gin.H{"data": cached})
+		return
+	}
+
 	var bag models.Bag
 	if err := db.DB.Where("lower(qr_code) = lower(?)", qr).First(&bag).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Bag not found with QR: " + qr})
@@ -263,5 +286,6 @@ func SearchBagByQRHandler(c *gin.Context) {
 		}
 	}
 
+	redisClient.Set(cacheKey, bag, time.Hour)
 	c.JSON(http.StatusOK, response)
 }

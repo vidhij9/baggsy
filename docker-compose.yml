@@ -1,12 +1,18 @@
 services:
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
   backend:
     build: ./backend
     ports:
       - "8080:8080"
     depends_on:
       - postgres
+      - redis
     environment:
       - DB_HOST=postgres
+      - REDIS_HOST=redis
   frontend:
     build: ./frontend
     ports:

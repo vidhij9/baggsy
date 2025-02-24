@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 import jsQR from 'jsqr';
+import debounce from 'lodash/debounce';
 
 function Search({ setError, token }) {
   const [bill, setBill] = useState('');
@@ -14,7 +15,8 @@ function Search({ setError, token }) {
 
   const validateBill = (billID) => billID.trim().length > 0;
 
-  const handlePhotoCaptureForQR = async () => {
+  const handlePhotoCaptureForQR = useCallback(debounce(async () => {
+    if (isLoading) return;
     setIsLoading(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
@@ -25,14 +27,14 @@ function Search({ setError, token }) {
       canvas.width = 640;
       canvas.height = 480;
       const context = canvas.getContext('2d');
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise(resolve => setTimeout(resolve, 5000)); // Extended to 5 seconds
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
       const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
       const code = jsQR(imageData.data, imageData.width, imageData.height);
       stream.getTracks().forEach(track => track.stop());
       setPhotoPreview(canvas.toDataURL('image/png'));
       if (!code) {
-        throw new Error('No QR code detected in photo');
+        throw new Error('No QR code detected in photo. Please try again with a clear image.');
       }
       const qr = code.data;
       const res = await axios.get(`http://localhost:8080/api/bag/${encodeURIComponent(qr)}`, {
@@ -42,19 +44,21 @@ function Search({ setError, token }) {
       setError(null);
       toast.success('Bag found!', { position: 'top-center' });
     } catch (err) {
-      const errorMsg = err.response?.data?.error || err.message || 'Search failed';
-      if (err.response?.status === 401) {
+      if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        setError('Camera access denied. Please enable camera permissions in your browser settings.');
+        toast.error('Camera access denied. Please enable permissions.', { position: 'top-center' });
+      } else if (err.response?.status === 401) {
         setError('Session expired. Please log in again.');
         toast.error('Session expired. Logging out...', { position: 'top-center' });
       } else {
-        setError(errorMsg);
-        toast.error(errorMsg, { position: 'top-center' });
+        setError(err.message || err.response?.data?.error || 'Search failed');
+        toast.error(err.message || err.response?.data?.error || 'Search failed', { position: 'top-center' });
       }
     } finally {
       setIsLoading(false);
       setPhotoPreview(null);
     }
-  };
+  }, 1000, { leading: true, trailing: false }), [isLoading, token]);
 
   const searchByBill = async () => {
     if (!validateBill(bill)) {
@@ -117,6 +121,11 @@ function Search({ setError, token }) {
             )}
             Take Photo to Search Bag
           </button>
+          {isLoading && (
+            <div className="text-accent text-center">
+              Scanning... <span className="animate-pulse">5 seconds remaining</span>
+            </div>
+          )}
           {photoPreview && (
             <img src={photoPreview} alt="Captured QR" className="w-full rounded-lg" />
           )}
