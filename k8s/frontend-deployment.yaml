@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: frontend
-        image: vidhij9/baggsy-frontend:latest
+        image: baggsy-developer/baggsy-frontend:latest
         ports:
         - containerPort: 80
         resources:
