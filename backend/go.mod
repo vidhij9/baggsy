@@ -9,7 +9,12 @@ require (
 	golang.org/x/crypto v0.33.0
 )
 
-require github.com/kr/text v0.2.0 // indirect
+require (
+	github.com/google/go-cmp v0.6.0 // indirect
+	github.com/kr/text v0.2.0 // indirect
+	github.com/onsi/ginkgo v1.16.5 // indirect
+	github.com/onsi/gomega v1.36.2 // indirect
+)
 
 require (
 	github.com/bytedance/sonic v1.12.9 // indirect
