@@ -17,12 +17,15 @@ var DB *gorm.DB
 func InitDB() (*gorm.DB, error) {
 	var err error
 
-	dbHost := os.Getenv("DB_HOST")
-	if dbHost == "" {
-		dbHost = "localhost" // Fallback for testing
+	host := os.Getenv("DB_HOST")
+	user := os.Getenv("DB_USER")
+	password := os.Getenv("DB_PASSWORD")
+	dbname := os.Getenv("DB_NAME")
+	if host == "" || user == "" || password == "" || dbname == "" {
+		return nil, fmt.Errorf("missing required database environment variables")
 	}
-	connStr := fmt.Sprintf("host=%s user=baggsy password=baggsy dbname=baggsy sslmode=disable", dbHost)
-	DB, err := gorm.Open("postgres", connStr)
+	connStr := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable", host, user, password, dbname)
+	DB, err = gorm.Open("postgres", connStr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %v", err)
 	}

@@ -1,0 +1,6 @@
+version: '3'
+services:
+  baggsy-backend:
+    image: vidhij9/baggsy-backend:latest
+    ports:
+      - "8080:80"
