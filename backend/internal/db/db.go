@@ -2,7 +2,6 @@ package db
 
 import (
 	"fmt"
-	"os"
 	"time"
 
 	"baggsy/backend/internal/models"
@@ -17,18 +16,14 @@ var DB *gorm.DB
 func InitDB() (*gorm.DB, error) {
 	var err error
 
-	host := os.Getenv("DB_HOST")
-	user := os.Getenv("DB_USER")
-	password := os.Getenv("DB_PASSWORD")
-	dbname := os.Getenv("DB_NAME")
-	if host == "" || user == "" || password == "" || dbname == "" {
-		return nil, fmt.Errorf("missing required database environment variables")
-	}
-	connStr := fmt.Sprintf("host=%s user=%s password=%s dbname=%s sslmode=disable", host, user, password, dbname)
-	DB, err = gorm.Open("postgres", connStr)
+	cfg := LoadConfig()
+	DB, err = gorm.Open("postgres", cfg.DSN())
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %v", err)
 	}
+
+	fmt.Println("connected successfully")
+	fmt.Println(DB)
 
 	sqlDB := DB.DB()
 	sqlDB.SetMaxOpenConns(200) // Increase for 100+ users

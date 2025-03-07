@@ -18,6 +18,7 @@ import (
 func main() {
 	database, err := db.InitDB()
 	if err != nil {
+		log.Println(database)
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer database.Close()
