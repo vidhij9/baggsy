@@ -116,7 +116,7 @@ func RegisterHandler(c *gin.Context) {
 	tx.Commit()
 
 	// Simulate sending verification email (replace with actual email service)
-	fmt.Printf("Verification link: http://localhost:8080/verify/%s\n", verificationToken)
+	fmt.Printf("Verification link: https://baggsy-env.eba-ppg7bx4x.ap-south-1.elasticbeanstalk.com/verify/%s\n", verificationToken)
 	c.JSON(http.StatusOK, gin.H{"message": "Account created. Check email for verification link."})
 }
 

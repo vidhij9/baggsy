@@ -22,7 +22,7 @@ function ListBills({ setError, token, refresh }) {
   const fetchBills = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:8080/api/bills?page=${page}&limit=${limit}`, {
+      const res = await axios.get(`https://baggsy-env.eba-ppg7bx4x.ap-south-1.elasticbeanstalk.com/api/bills?page=${page}&limit=${limit}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       console.log("Bills response:", res.data);
@@ -54,7 +54,7 @@ function ListBills({ setError, token, refresh }) {
   const handleUnlink = async (bagId) => {
     if (!window.confirm('Are you sure you want to unlink this bag?')) return;
     try {
-      await axios.delete(`http://localhost:8080/api/unlink-bag/${bagId}`, {
+      await axios.delete(`https://baggsy-env.eba-ppg7bx4x.ap-south-1.elasticbeanstalk.com/api/unlink-bag/${bagId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchBills();

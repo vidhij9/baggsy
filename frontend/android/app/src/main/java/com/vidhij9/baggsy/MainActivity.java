@@ -1,4 +1,4 @@
-package com.baggsy-developer.baggsy;
+package com.vidhij9.baggsy;
 
 import com.getcapacitor.BridgeActivity;
 

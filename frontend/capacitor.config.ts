@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.baggsy-developer.baggsy',
+  appId: 'com.vidhij9.baggsy',
   appName: 'Baggsy',
   webDir: 'build'
 };

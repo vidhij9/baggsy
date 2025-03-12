@@ -16,7 +16,7 @@ function LinkBagsToBillModal({ setError, closeModal, token, onSuccess }) {
 
   const validateQR = async (qr) => {
     try {
-      const res = await axios.get(`http://localhost:8080/api/bag/${encodeURIComponent(qr)}`, {
+      const res = await axios.get(`https://baggsy-env.eba-ppg7bx4x.ap-south-1.elasticbeanstalk.com/api/bag/${encodeURIComponent(qr)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const bag = res.data.bag;
@@ -101,7 +101,7 @@ function LinkBagsToBillModal({ setError, closeModal, token, onSuccess }) {
     setIsLoading(true);
     try {
       const response = await axios.post(
-        'http://localhost:8080/api/link-bags-to-bill',
+        'https://baggsy-env.eba-ppg7bx4x.ap-south-1.elasticbeanstalk.com/api/link-bags-to-bill',
         { billID, parentIDs, capacity },
         { headers: { Authorization: `Bearer ${token}` } }
       );
