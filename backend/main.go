@@ -38,7 +38,7 @@ func main() {
 	})
 
 	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = []string{"https://baggsy-env.eba-ppg7bx4x.ap-south-1.elasticbeanstalk.com", "http://localhost:3000"}
+	corsConfig.AllowOrigins = []string{"http://localhost:3000", "https://baggsy-env.eba-ppg7bx4x.ap-south-1.elasticbeanstalk.com"}
 	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Authorization"}
 	corsConfig.AllowCredentials = true
