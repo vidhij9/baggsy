@@ -37,7 +37,7 @@ function Search({ setError, token }) {
         throw new Error('No QR code detected in photo. Please try again with a clear image.');
       }
       const qr = code.data;
-      const res = await axios.get(`https://baggsy-env.eba-ppg7bx4x.ap-south-1.elasticbeanstalk.com/api/bag/${encodeURIComponent(qr)}`, {
+      const res = await axios.get(`http://baggsy-env.eba-z5m26a8j.ap-south-1.elasticbeanstalk.com/api/bag/${encodeURIComponent(qr)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setResult({ type: 'bag', data: res.data });
@@ -68,7 +68,7 @@ function Search({ setError, token }) {
     }
     setIsLoading(true);
     try {
-      const res = await axios.get(`https://baggsy-env.eba-ppg7bx4x.ap-south-1.elasticbeanstalk.com/api/bill/${encodeURIComponent(bill)}`, {
+      const res = await axios.get(`http://baggsy-env.eba-z5m26a8j.ap-south-1.elasticbeanstalk.com/api/bill/${encodeURIComponent(bill)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setResult({ type: 'bill', data: res.data });

@@ -28,7 +28,7 @@ function ListBags({ setError, token }) {
                 page: filters.page.toString(),
                 limit: filters.limit.toString(),
             }).toString();
-            const res = await axios.get(`https://baggsy-env.eba-ppg7bx4x.ap-south-1.elasticbeanstalk.com/api/bags?${params}`, {
+            const res = await axios.get(`http://baggsy-env.eba-z5m26a8j.ap-south-1.elasticbeanstalk.com/api/bags?${params}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (res.data.message === "No bags found.") {

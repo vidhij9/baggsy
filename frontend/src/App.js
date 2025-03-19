@@ -30,7 +30,7 @@ function App() {
 
   const validateToken = async () => {
     try {
-      const res = await axios.get('https://baggsy-env.eba-ppg7bx4x.ap-south-1.elasticbeanstalk.com/api/bags', { headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.get('http://baggsy-env.eba-z5m26a8j.ap-south-1.elasticbeanstalk.com/api/bags', { headers: { Authorization: `Bearer ${token}` } });
       if (res.status === 200 && role !== localStorage.getItem('role')) {
         setRole(null);
         logout();

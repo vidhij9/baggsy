@@ -38,14 +38,18 @@ func main() {
 	})
 
 	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = []string{"http://localhost:3000", "https://baggsy-env.eba-ppg7bx4x.ap-south-1.elasticbeanstalk.com"}
+	// corsConfig.AllowOrigins = []string{"http://localhost:3000", "http://baggsy-env.eba-z5m26a8j.ap-south-1.elasticbeanstalk.com"}
+	corsConfig.AllowOrigins = []string{"*"} // Allow all origins for testing
 	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Authorization"}
 	corsConfig.AllowCredentials = true
 	corsConfig.ExposeHeaders = []string{"Content-Length", "X-Total-Count"}
+	corsConfig.MaxAge = 12 * 3600 // Cache preflight response for 12 hours
 	r.Use(cors.New(corsConfig))
+	log.Fatal(r.Run(":8080"))
 
 	// Public routes
+	r.GET("/api/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "healthy"}) })
 	r.POST("/login", handlers.LoginHandler)
 	r.POST("/register", handlers.RegisterHandler)          // New account creation
 	r.GET("/verify/:token", handlers.VerifyAccountHandler) // Email verification
