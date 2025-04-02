@@ -14,9 +14,9 @@ function Login({ setToken, setRole, setError, logout, switchView }) {
 
   const login = async (e) => {
     e.preventDefault();
-    console.log("Attempting login to http://baggsy-env.eba-z5m26a8j.ap-south-1.elasticbeanstalk.com/login");
+    console.log("Attempting login to https://baggsy.app/login");
     try {
-      const res = await axios.post('http://baggsy-env.eba-z5m26a8j.ap-south-1.elasticbeanstalk.com/login', { username, password });
+      const res = await axios.post('https://baggsy.app/login', { username, password });
       console.log("Login successful:", res.data);
       setToken(res.data.token);
       localStorage.setItem('token', res.data.token);
@@ -49,7 +49,7 @@ function Login({ setToken, setRole, setError, logout, switchView }) {
       return;
     }
     try {
-      const res = await axios.post('http://baggsy-env.eba-z5m26a8j.ap-south-1.elasticbeanstalk.com/register', {
+      const res = await axios.post('https://baggsy.app/register', {
         username,
         password,
         email,
