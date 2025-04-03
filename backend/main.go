@@ -43,9 +43,8 @@ func main() {
 	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Authorization"}
 	corsConfig.AllowCredentials = true
 	corsConfig.ExposeHeaders = []string{"Content-Length", "X-Total-Count"}
-	corsConfig.MaxAge = 12 * 3600 // Cache preflight response for 12 hours
+	corsConfig.MaxAge = 12 * 3600
 	r.Use(cors.New(corsConfig))
-	log.Fatal(r.Run(":8080"))
 
 	// Public routes
 	r.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "healthy"}) })
