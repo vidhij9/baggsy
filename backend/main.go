@@ -48,7 +48,7 @@ func main() {
 	log.Fatal(r.Run(":8080"))
 
 	// Public routes
-	r.GET("/api/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "healthy"}) })
+	r.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "healthy"}) })
 	r.POST("/login", handlers.LoginHandler)
 	r.POST("/register", handlers.RegisterHandler)          // New account creation
 	r.GET("/verify/:token", handlers.VerifyAccountHandler) // Email verification
