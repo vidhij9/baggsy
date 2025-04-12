@@ -11,7 +11,7 @@ services:
       - postgres
       - redis
     environment:
-      - DATABASE_URL=postgresql://baggsyUser:baggsy@postgres.railway.internal:5432/baggsy
+      - PGHOST=postgres.railway.internal
       - REDIS_HOST=redis
   frontend:
     build: ./frontend
@@ -20,7 +20,7 @@ services:
   postgres:
     image: postgres:13
     environment:
-      - DATABASE_URL
+      - PGHOST
       - POSTGRES_USER
       - POSTGRES_PASSWORD
       - POSTGRES_DB

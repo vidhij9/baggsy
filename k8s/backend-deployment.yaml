@@ -18,8 +18,8 @@ spec:
         ports:
         - containerPort: 8080
         env:
-        - name: DATABASE_URL
-          value: postgres
+        - name: PGHOST
+          value: postgres.railway.internal
         resources:
           limits:
             cpu: "0.5"
