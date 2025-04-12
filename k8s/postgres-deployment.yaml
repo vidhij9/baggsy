@@ -19,9 +19,9 @@ spec:
         - name: POSTGRES_DB
           value: baggsy
         - name: POSTGRES_USER
-          value: postgres
+          value: baggsyUser
         - name: POSTGRES_PASSWORD
-          value: postgres
+          value: baggsy
         ports:
         - containerPort: 5432
         resources:
