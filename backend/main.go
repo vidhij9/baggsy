@@ -16,17 +16,24 @@ import (
 )
 
 func main() {
+	// Initialize Database connection (assuming GORM)
 	database, err := db.InitDB()
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
-	defer database.Close()
+
+	// Properly defer closure of database connection
+	sqlDB := database.DB()
+	// if err != nil {
+	// 	log.Fatalf("Failed to get SQL DB from GORM: %v", err)
+	// }
+	defer sqlDB.Close()
 
 	r := gin.New()
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
 
-	// Rate limiting: 100 requests per second per IP
+	// Rate limiting: 100 requests per second (global)
 	limiter := rate.NewLimiter(rate.Every(time.Second/100), 100)
 	r.Use(func(c *gin.Context) {
 		if !limiter.Allow() {
@@ -36,8 +43,9 @@ func main() {
 		c.Next()
 	})
 
+	// Corrected CORS configuration (frontend URLs only)
 	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = []string{"https://baggsy-frontend.up.railway.app", "https://baggsy-backend.up.railway.app"}
+	corsConfig.AllowOrigins = []string{"https://baggsy-frontend.up.railway.app"}
 	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Authorization"}
 	corsConfig.AllowCredentials = true
@@ -45,16 +53,20 @@ func main() {
 	corsConfig.MaxAge = 12 * 3600
 	r.Use(cors.New(corsConfig))
 
-	// Public routes
-	r.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "healthy"}) })
-	r.POST("/login", handlers.LoginHandler)
-	r.POST("/register", handlers.RegisterHandler)          // New account creation
-	r.GET("/verify/:token", handlers.VerifyAccountHandler) // Email verification
-	r.OPTIONS("/*path", func(c *gin.Context) {             // allow all OPTIONS requests (CORS preflight)
+	// Handle OPTIONS globally (CORS preflight)
+	r.OPTIONS("/*path", func(c *gin.Context) {
 		c.AbortWithStatus(204)
 	})
 
-	// Protected routes
+	// Public routes
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "healthy"})
+	})
+	r.POST("/login", handlers.LoginHandler)
+	r.POST("/register", handlers.RegisterHandler)
+	r.GET("/verify/:token", handlers.VerifyAccountHandler)
+
+	// Protected routes (auth middleware)
 	api := r.Group("/api").Use(middleware.AuthMiddleware())
 	{
 		api.POST("/register-parent", middleware.RestrictTo("employee", "admin"), handlers.RegisterParentHandler)
@@ -68,13 +80,14 @@ func main() {
 		api.GET("/bill/:billID", middleware.RestrictTo("admin"), handlers.SearchBillByNumberHandler)
 		api.GET("/bag/:qr", middleware.RestrictTo("admin"), handlers.SearchBagByQRHandler)
 	}
+
+	// Single server run command at the end (correct)
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
-	log.Fatal(r.Run(":" + port))
 
-	if err := r.Run(":8080"); err != nil {
+	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }
