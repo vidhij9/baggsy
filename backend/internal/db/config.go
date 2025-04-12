@@ -15,11 +15,11 @@ type Config struct {
 
 func LoadConfig() *Config {
 	return &Config{
-		DBHost:     os.Getenv("DB_HOST"),
+		DBHost:     os.Getenv("PGHOST"),
 		DBPort:     os.Getenv("DB_PORT"),
-		DBUser:     os.Getenv("DB_USER"),
-		DBPassword: os.Getenv("DB_PASSWORD"),
-		DBName:     os.Getenv("DB_NAME"),
+		DBUser:     os.Getenv("POSTGRES_USER"),
+		DBPassword: os.Getenv("POSTGRES_PASSWORD"),
+		DBName:     os.Getenv("POSTGRES_DB"),
 	}
 }
 

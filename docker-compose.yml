@@ -11,7 +11,7 @@ services:
       - postgres
       - redis
     environment:
-      - DB_HOST=baggsy-db.cfi40ye0yasz.ap-south-1.rds.amazonaws.com
+      - PGHOST=postgres.railway.internal
       - REDIS_HOST=redis
   frontend:
     build: ./frontend
@@ -20,10 +20,10 @@ services:
   postgres:
     image: postgres:13
     environment:
-      - DB_HOST
-      - DB_USER
-      - DB_PASSWORD
-      - DB_NAME
+      - PGHOST
+      - POSTGRES_USER
+      - POSTGRES_PASSWORD
+      - POSTGRES_DB
     volumes:
       - pgdata:/var/lib/postgresql/data
 volumes:

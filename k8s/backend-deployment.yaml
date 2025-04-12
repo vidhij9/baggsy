@@ -18,7 +18,7 @@ spec:
         ports:
         - containerPort: 8080
         env:
-        - name: DB_HOST
+        - name: PGHOST
           value: postgres
         resources:
           limits:
