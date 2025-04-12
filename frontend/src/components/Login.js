@@ -14,9 +14,9 @@ function Login({ setToken, setRole, setError, logout, switchView }) {
 
   const login = async (e) => {
     e.preventDefault();
-    console.log("Attempting login to https://baggsy.app/login");
+    console.log("Attempting login to https://baggsy-backend.up.railway.app/login");
     try {
-      const res = await axios.post('https://baggsy.app/login', { username, password });
+      const res = await axios.post('https://baggsy-backend.up.railway.app/login', { username, password });
       console.log("Login successful:", res.data);
       setToken(res.data.token);
       localStorage.setItem('token', res.data.token);
@@ -49,7 +49,7 @@ function Login({ setToken, setRole, setError, logout, switchView }) {
       return;
     }
     try {
-      const res = await axios.post('https://baggsy.app/register', {
+      const res = await axios.post('https://baggsy-backend.up.railway.app/register', {
         username,
         password,
         email,

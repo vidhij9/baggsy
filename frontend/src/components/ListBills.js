@@ -22,7 +22,7 @@ function ListBills({ setError, token, refresh }) {
   const fetchBills = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`https://baggsy.app/api/bills?page=${page}&limit=${limit}`, {
+      const res = await axios.get(`https://baggsy-backend.up.railway.app/api/bills?page=${page}&limit=${limit}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       console.log("Bills response:", res.data);
@@ -54,7 +54,7 @@ function ListBills({ setError, token, refresh }) {
   const handleUnlink = async (bagId) => {
     if (!window.confirm('Are you sure you want to unlink this bag?')) return;
     try {
-      await axios.delete(`https://baggsy.app/api/unlink-bag/${bagId}`, {
+      await axios.delete(`https://baggsy-backend.up.railway.app/api/unlink-bag/${bagId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchBills();

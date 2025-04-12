@@ -37,7 +37,7 @@ function RegisterChildModal({ parent, closeModal, setError, token }) {
         throw new Error('Child QR code is required');
       }
       const res = await axios.post(
-        'https://baggsy.app/api/register-child',
+        'https://baggsy-backend.up.railway.app/api/register-child',
         { qrCode: qr, type: 'child', parentId: parent.id },
         { headers: { Authorization: `Bearer ${token}` } }
       );

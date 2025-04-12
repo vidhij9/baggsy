@@ -28,7 +28,7 @@ function ListBags({ setError, token }) {
                 page: filters.page.toString(),
                 limit: filters.limit.toString(),
             }).toString();
-            const res = await axios.get(`https://baggsy.app/api/bags?${params}`, {
+            const res = await axios.get(`https://baggsy-backend.up.railway.app/api/bags?${params}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (res.data.message === "No bags found.") {

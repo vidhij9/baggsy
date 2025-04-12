@@ -30,7 +30,7 @@ function App() {
 
   const validateToken = async () => {
     try {
-      const res = await axios.get('https://baggsy.app/api/bags', { headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.get('https://baggsy-backend.up.railway.app/api/bags', { headers: { Authorization: `Bearer ${token}` } });
       if (res.status === 200 && role !== localStorage.getItem('role')) {
         setRole(null);
         logout();

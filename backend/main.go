@@ -42,7 +42,7 @@ func main() {
 	})
 
 	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = []string{"https://baggsy.app", "http://localhost:3000"}
+	corsConfig.AllowOrigins = []string{"https://baggsy-frontend.up.railway.app", "https://baggsy.app"}
 	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Authorization"}
 	corsConfig.AllowCredentials = true
@@ -55,6 +55,9 @@ func main() {
 	r.POST("/login", handlers.LoginHandler)
 	r.POST("/register", handlers.RegisterHandler)          // New account creation
 	r.GET("/verify/:token", handlers.VerifyAccountHandler) // Email verification
+	r.OPTIONS("/*path", func(c *gin.Context) {             // allow all OPTIONS requests (CORS preflight)
+		c.AbortWithStatus(204)
+	})
 
 	// Protected routes
 	api := r.Group("/api").Use(middleware.AuthMiddleware())

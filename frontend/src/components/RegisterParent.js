@@ -46,7 +46,7 @@ function RegisterParent({ setError, token }) {
         throw new Error('Invalid QR format. Use P<Number>-<ChildCount> (e.g., P123-10)');
       }
       const res = await axios.post(
-        'https://baggsy.app/api/register-parent',
+        'https://baggsy-backend.up.railway.app/api/register-parent',
         { qrCode: qr, type: 'parent' },
         { headers: { Authorization: `Bearer ${token}` } }
       );
