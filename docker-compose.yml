@@ -11,7 +11,7 @@ services:
       - postgres
       - redis
     environment:
-      - DB_HOST=postgres
+      - DB_HOST=baggsy-db.cfi40ye0yasz.ap-south-1.rds.amazonaws.com
       - REDIS_HOST=redis
   frontend:
     build: ./frontend

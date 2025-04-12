@@ -1,6 +1,7 @@
 {
   "name": "baggsy-frontend",
   "version": "1.0.0",
+  "private": true,
   "dependencies": {
     "@capacitor/android": "^7.0.1",
     "@capacitor/cli": "^7.0.1",

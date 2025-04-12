@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"time"
 
 	"baggsy/backend/internal/db"
@@ -18,7 +18,6 @@ import (
 func main() {
 	database, err := db.InitDB()
 	if err != nil {
-		log.Println(database)
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 	defer database.Close()
@@ -26,6 +25,11 @@ func main() {
 	r := gin.New()
 	r.Use(gin.Logger())
 	r.Use(gin.Recovery())
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	log.Fatal(r.Run(":" + port))
 
 	// Rate limiting: 100 requests per second per IP
 	limiter := rate.NewLimiter(rate.Every(time.Second/100), 100)
@@ -67,7 +71,6 @@ func main() {
 		api.GET("/bag/:qr", middleware.RestrictTo("admin"), handlers.SearchBagByQRHandler)
 	}
 
-	fmt.Println("Starting server on :8080...")
 	if err := r.Run(":8080"); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
