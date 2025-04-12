@@ -42,7 +42,7 @@ func main() {
 	})
 
 	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowOrigins = []string{"https://baggsy-frontend.up.railway.app", "https://baggsy.app"}
+	corsConfig.AllowOrigins = []string{"https://baggsy-frontend.up.railway.app", "https://baggsy-backend.up.railway.app"}
 	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Authorization"}
 	corsConfig.AllowCredentials = true
