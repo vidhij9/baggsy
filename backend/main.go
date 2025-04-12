@@ -98,12 +98,12 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gin-contrib/cors"
+	"github.com/gin-gonic/gin"
+
 	"baggsy/backend/internal/db"
 	"baggsy/backend/internal/handlers"
 	"baggsy/backend/internal/middleware"
-
-	"github.com/gin-contrib/cors"
-	"github.com/gin-gonic/gin"
 )
 
 func main() {
@@ -112,15 +112,14 @@ func main() {
 		log.Fatalf("Failed to connect DB: %v", err)
 	}
 
-	sqlDB := database.DB()
-	// if err != nil {
-	// 	log.Fatalf("Failed to get SQL DB: %v", err)
-	// }
+	sqlDB, err := database.DB()
+	if err != nil {
+		log.Fatalf("Failed to get SQL DB: %v", err)
+	}
 	defer sqlDB.Close()
 
 	r := gin.Default()
 
-	// CORS middleware configuration
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"https://baggsy-frontend.up.railway.app", "http://localhost:3000"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -128,7 +127,6 @@ func main() {
 		AllowCredentials: true,
 	}))
 
-	// Routes
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "healthy"})
 	})
@@ -137,12 +135,12 @@ func main() {
 	api := r.Group("/api").Use(middleware.AuthMiddleware())
 	api.GET("/bags", middleware.RestrictTo("admin"), handlers.ListBagsHandler)
 
-	// Correct Railway port binding
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080" // Local default
+		port = "8080"
 	}
 
+	log.Printf("Server listening on port %s", port)
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("Server Error: %v", err)
 	}
