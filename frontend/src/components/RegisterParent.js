@@ -6,6 +6,7 @@ import { ArchiveBoxIcon } from '@heroicons/react/24/solid';
 import RegisterChildModal from './RegisterChildModal';
 import jsQR from 'jsqr';
 import debounce from 'lodash/debounce';
+const API_URL = import.meta.env.VITE_API_URL;
 
 function RegisterParent({ setError, token }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -46,7 +47,7 @@ function RegisterParent({ setError, token }) {
         throw new Error('Invalid QR format. Use P<Number>-<ChildCount> (e.g., P123-10)');
       }
       const res = await axios.post(
-        'https://baggsy-backend.up.railway.app/api/register-parent',
+        `${API_URL}/api/register-parent`,
         { qrCode: qr, type: 'parent' },
         { headers: { Authorization: `Bearer ${token}` } }
       );

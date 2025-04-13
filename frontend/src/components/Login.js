@@ -3,6 +3,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { SparklesIcon } from '@heroicons/react/24/solid';
 import { toast } from 'react-toastify';
+const API_URL = import.meta.env.VITE_API_URL;
 
 function Login({ setToken, setRole, setError, logout, switchView }) {
   const [isRegistering, setIsRegistering] = useState(false);
@@ -14,9 +15,9 @@ function Login({ setToken, setRole, setError, logout, switchView }) {
 
   const login = async (e) => {
     e.preventDefault();
-    console.log("Attempting login to https://baggsy-backend.up.railway.app/login");
+    console.log("Attempting login to baggsy");
     try {
-      const res = await axios.post('https://baggsy-backend.up.railway.app/login', { username, password });
+      const res = await axios.post(`${API_URL}/login`, { username, password });
       console.log("Login successful:", res.data);
       setToken(res.data.token);
       localStorage.setItem('token', res.data.token);
@@ -49,7 +50,7 @@ function Login({ setToken, setRole, setError, logout, switchView }) {
       return;
     }
     try {
-      const res = await axios.post('https://baggsy-backend.up.railway.app/register', {
+      const res = await axios.post(`${API_URL}/register`, {
         username,
         password,
         email,

@@ -10,6 +10,7 @@ import Search from './components/Search';
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import { SparklesIcon } from '@heroicons/react/24/solid';
+const API_URL = import.meta.env.VITE_API_URL;
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token'));
@@ -30,7 +31,7 @@ function App() {
 
   const validateToken = async () => {
     try {
-      const res = await axios.get('https://baggsy-backend.up.railway.app/api/bags', { headers: { Authorization: `Bearer ${token}` } });
+      const res = await axios.get(`${API_URL}/api/bags`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.status === 200 && role !== localStorage.getItem('role')) {
         setRole(null);
         logout();

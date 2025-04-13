@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/solid';
 import jsQR from 'jsqr';
 import debounce from 'lodash/debounce';
+const API_URL = import.meta.env.VITE_API_URL;
 
 function Search({ setError, token }) {
   const [bill, setBill] = useState('');
@@ -37,7 +38,7 @@ function Search({ setError, token }) {
         throw new Error('No QR code detected in photo. Please try again with a clear image.');
       }
       const qr = code.data;
-      const res = await axios.get(`https://baggsy-backend.up.railway.app/api/bag/${encodeURIComponent(qr)}`, {
+      const res = await axios.get(`${API_URL}/api/bag/${encodeURIComponent(qr)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setResult({ type: 'bag', data: res.data });
@@ -68,7 +69,7 @@ function Search({ setError, token }) {
     }
     setIsLoading(true);
     try {
-      const res = await axios.get(`https://baggsy-backend.up.railway.app/api/bill/${encodeURIComponent(bill)}`, {
+      const res = await axios.get(`${API_URL}/api/bill/${encodeURIComponent(bill)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       setResult({ type: 'bill', data: res.data });

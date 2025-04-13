@@ -12,6 +12,7 @@ function ListBills({ setError, token, refresh }) {
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
+  const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     if (token) {
@@ -22,7 +23,7 @@ function ListBills({ setError, token, refresh }) {
   const fetchBills = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`https://baggsy-backend.up.railway.app/api/bills?page=${page}&limit=${limit}`, {
+      const res = await axios.get(`${API_URL}/api/bills?page=${page}&limit=${limit}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       console.log("Bills response:", res.data);
@@ -54,7 +55,7 @@ function ListBills({ setError, token, refresh }) {
   const handleUnlink = async (bagId) => {
     if (!window.confirm('Are you sure you want to unlink this bag?')) return;
     try {
-      await axios.delete(`https://baggsy-backend.up.railway.app/api/unlink-bag/${bagId}`, {
+      await axios.delete(`${API_URL}/api/unlink-bag/${bagId}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       fetchBills();

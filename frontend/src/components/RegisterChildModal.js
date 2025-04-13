@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { ArchiveBoxIcon } from '@heroicons/react/24/solid';
 import jsQR from 'jsqr';
 import debounce from 'lodash/debounce';
+const API_URL = import.meta.env.VITE_API_URL;
 
 function RegisterChildModal({ parent, closeModal, setError, token }) {
   const [currentCount, setCurrentCount] = useState(0);
@@ -37,7 +38,7 @@ function RegisterChildModal({ parent, closeModal, setError, token }) {
         throw new Error('Child QR code is required');
       }
       const res = await axios.post(
-        'https://baggsy-backend.up.railway.app/api/register-child',
+        `${API_URL}/api/register-child`,
         { qrCode: qr, type: 'child', parentId: parent.id },
         { headers: { Authorization: `Bearer ${token}` } }
       );

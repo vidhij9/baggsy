@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import { DocumentTextIcon } from '@heroicons/react/24/solid';
 import jsQR from 'jsqr';
 import debounce from 'lodash/debounce';
+const API_URL = import.meta.env.VITE_API_URL;
 
 function LinkBagsToBillModal({ setError, closeModal, token, onSuccess }) {
   const [billID, setBillID] = useState('');
@@ -16,7 +17,7 @@ function LinkBagsToBillModal({ setError, closeModal, token, onSuccess }) {
 
   const validateQR = async (qr) => {
     try {
-      const res = await axios.get(`https://baggsy-backend.up.railway.app/api/bag/${encodeURIComponent(qr)}`, {
+      const res = await axios.get(`${API_URL}/api/bag/${encodeURIComponent(qr)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const bag = res.data.bag;
@@ -101,7 +102,7 @@ function LinkBagsToBillModal({ setError, closeModal, token, onSuccess }) {
     setIsLoading(true);
     try {
       const response = await axios.post(
-        'https://baggsy-backend.up.railway.app/api/link-bags-to-bill',
+        `${API_URL}/api/link-bags-to-bill`,
         { billID, parentIDs, capacity },
         { headers: { Authorization: `Bearer ${token}` } }
       );

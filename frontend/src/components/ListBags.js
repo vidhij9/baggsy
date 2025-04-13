@@ -3,6 +3,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { ArchiveBoxIcon } from '@heroicons/react/24/solid';
+const API_URL = import.meta.env.VITE_API_URL;
 
 function ListBags({ setError, token }) {
     const [bags, setBags] = useState([]);
@@ -28,7 +29,7 @@ function ListBags({ setError, token }) {
                 page: filters.page.toString(),
                 limit: filters.limit.toString(),
             }).toString();
-            const res = await axios.get(`https://baggsy-backend.up.railway.app/api/bags?${params}`, {
+            const res = await axios.get(`${API_URL}/api/bags?${params}`, {
                 headers: { Authorization: `Bearer ${token}` },
             });
             if (res.data.message === "No bags found.") {
