@@ -1,26 +1,18 @@
-# # Build stage
-# FROM node:18 AS builder
-# WORKDIR /app
-# COPY package.json .
-# RUN npm install
-# COPY . .
-# RUN npm run build
+# Using latest recommended LTS Alpine Node image (secure version)
+FROM node:20.12.2-alpine3.19 AS builder
 
-# # Serve stage
-# FROM nginx:alpine
-# COPY --from=builder /app/build /usr/share/nginx/html
-# COPY nginx.conf /etc/nginx/conf.d/default.conf
-# EXPOSE 80
-# CMD ["nginx", "-g", "daemon off;"]
-
-FROM node:18 AS builder
 WORKDIR /app
-COPY package.json .
-RUN npm install
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev
 COPY . .
 RUN npm run build
 
-FROM nginx:alpine
+# Using secure nginx-alpine stable image with fixed vulnerabilities
+FROM nginxinc/nginx-unprivileged:1.25-alpine3.19-slim
+
+# Copy built files to nginx
 COPY --from=builder /app/build /usr/share/nginx/html
-EXPOSE 80
+
+USER 101
+EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]
