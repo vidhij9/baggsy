@@ -112,10 +112,7 @@ func main() {
 		log.Fatalf("Failed to connect DB: %v", err)
 	}
 
-	sqlDB, err := database.DB()
-	if err != nil {
-		log.Fatalf("Failed to get SQL DB: %v", err)
-	}
+	sqlDB := database.DB()
 	defer sqlDB.Close()
 
 	r := gin.Default()
