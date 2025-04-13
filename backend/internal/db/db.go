@@ -1,7 +1,7 @@
 package db
 
 import (
-	"fmt"
+	"log"
 	"time"
 
 	"baggsy/backend/internal/models"
@@ -19,18 +19,18 @@ func InitDB() (*gorm.DB, error) {
 	cfg := LoadConfig()
 	DB, err = gorm.Open("postgres", cfg.DSN())
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to database: %v", err)
+		log.Printf("failed to connect to database: %v", err)
+		return nil, err
 	}
 
-	fmt.Println("connected successfully")
-	fmt.Println(DB)
+	log.Println("connected successfully")
 
 	sqlDB := DB.DB()
 	sqlDB.SetMaxOpenConns(200) // Increase for 100+ users
 	sqlDB.SetMaxIdleConns(50)  // Keep idle connections
 	sqlDB.SetConnMaxLifetime(time.Hour)
 
-	fmt.Println("Creating ENUM types and schema...")
+	log.Println("Creating ENUM types and schema...")
 	err = DB.Exec(`
 		DO $$ BEGIN
 			CREATE TYPE user_role AS ENUM ('employee', 'admin');
@@ -78,22 +78,25 @@ func InitDB() (*gorm.DB, error) {
 		CREATE INDEX IF NOT EXISTS idx_links_bill_id ON links(bill_id);
 	`).Error
 	if err != nil {
-		return nil, fmt.Errorf("failed to create schema: %v", err)
+		log.Fatalf("failed to create schema: %v", err)
+		return nil, err
 	}
 
-	fmt.Println("Running AutoMigrate for model consistency...")
+	log.Println("Running AutoMigrate for model consistency...")
 	err = DB.AutoMigrate(&models.User{}, &models.Bag{}, &models.Link{}).Error
 	if err != nil {
-		return nil, fmt.Errorf("failed to auto-migrate: %v", err)
+		log.Fatalf("failed to auto-migrate: %v", err)
+		return nil, err
 	}
 
 	var admin models.User
 	if err := DB.Where("username = ?", "admin").First(&admin).Error; err != nil {
 		if gorm.IsRecordNotFoundError(err) {
-			fmt.Println("Creating initial admin user...")
+			log.Println("Creating initial admin user...")
 			hash, err := bcrypt.GenerateFromPassword([]byte("Admin123"), bcrypt.DefaultCost)
 			if err != nil {
-				return nil, fmt.Errorf("failed to hash password: %v", err)
+				log.Fatalf("failed to hash password: %v", err)
+				return nil, err
 			}
 			adminUser := models.User{
 				Username:     "admin",
@@ -103,14 +106,16 @@ func InitDB() (*gorm.DB, error) {
 				Verified:     true,
 			}
 			if err := DB.Create(&adminUser).Error; err != nil {
-				return nil, fmt.Errorf("failed to create admin user: %v", err)
+				log.Fatalf("failed to create admin user: %v", err)
+				return nil, err
 			}
-			fmt.Println("Admin user created successfully.")
+			log.Println("Admin user created successfully.")
 		} else {
-			return nil, fmt.Errorf("error checking for admin user: %v", err)
+			log.Fatalf("error checking for admin user: %v", err)
+			return nil, err
 		}
 	} else {
-		fmt.Println("Admin user already exists.")
+		log.Println("Admin user already exists.")
 	}
 
 	return DB, nil

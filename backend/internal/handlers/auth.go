@@ -3,7 +3,7 @@ package handlers
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"fmt"
+	"log"
 	"net/http"
 	"time"
 
@@ -30,7 +30,7 @@ func LoginHandler(c *gin.Context) {
 
 	var user models.User
 	if err := db.DB.Where("username = ?", creds.Username).First(&user).Error; err != nil {
-		fmt.Printf("User not found: %v\n", err)
+		log.Printf("User not found: %v\n", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
@@ -40,7 +40,7 @@ func LoginHandler(c *gin.Context) {
 	}
 
 	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(creds.Password)); err != nil {
-		fmt.Printf("Password mismatch: %v\n", err)
+		log.Printf("Password mismatch: %v\n", err)
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid credentials"})
 		return
 	}
@@ -116,7 +116,7 @@ func RegisterHandler(c *gin.Context) {
 	tx.Commit()
 
 	// Simulate sending verification email (replace with actual email service)
-	fmt.Printf("Verification link: https://baggsy-backend.up.railway.app/verify/%s\n", verificationToken)
+	log.Printf("Verification link: https://baggsy-backend.up.railway.app/verify/%s\n", verificationToken)
 	c.JSON(http.StatusOK, gin.H{"message": "Account created. Check email for verification link."})
 }
 
