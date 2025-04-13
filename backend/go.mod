@@ -7,6 +7,7 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/jinzhu/gorm v1.9.16
 	golang.org/x/crypto v0.33.0
+	golang.org/x/time v0.11.0
 )
 
 require (
