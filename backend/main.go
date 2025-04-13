@@ -91,6 +91,7 @@
 //			log.Fatalf("Failed to start server: %v", err)
 //		}
 //	}
+
 package main
 
 import (
@@ -134,10 +135,13 @@ func main() {
 
 	port := os.Getenv("PORT")
 	if port == "" {
+		log.Println("PORT env var not set, defaulting to 8080")
 		port = "8080"
+	} else {
+		log.Printf("PORT env var set by Railway: %s", port)
 	}
 
-	log.Printf("Server listening on port %s", port)
+	log.Printf("Server explicitly listening on port %s", port)
 	if err := r.Run(":" + port); err != nil {
 		log.Fatalf("Server Error: %v", err)
 	}
