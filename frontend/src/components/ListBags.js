@@ -3,7 +3,7 @@ import axios from 'axios';
 import { motion } from 'framer-motion';
 import { toast } from 'react-toastify';
 import { ArchiveBoxIcon } from '@heroicons/react/24/solid';
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = process.env.REACT_APP_API_URL;
 
 function ListBags({ setError, token }) {
     const [bags, setBags] = useState([]);

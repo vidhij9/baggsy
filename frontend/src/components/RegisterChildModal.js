@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 import { ArchiveBoxIcon } from '@heroicons/react/24/solid';
 import jsQR from 'jsqr';
 import debounce from 'lodash/debounce';
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = process.env.REACT_APP_API_URL;
 
 function RegisterChildModal({ parent, closeModal, setError, token }) {
   const [currentCount, setCurrentCount] = useState(0);

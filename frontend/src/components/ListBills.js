@@ -12,7 +12,7 @@ function ListBills({ setError, token, refresh }) {
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
-  const API_URL = import.meta.env.VITE_API_URL;
+  const API_URL = process.env.REACT_APP_API_URL;
 
   useEffect(() => {
     if (token) {

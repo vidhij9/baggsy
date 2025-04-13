@@ -1,18 +1,13 @@
-# Using latest recommended LTS Alpine Node image (secure version)
-FROM node:20.12.2-alpine3.19 AS builder
-
+# Stage 1: Build frontend
+FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 COPY . .
 RUN npm run build
 
-# Using secure nginx-alpine stable image with fixed vulnerabilities
-FROM nginxinc/nginx-unprivileged:1.25-alpine3.19-slim
-
-# Copy built files to nginx
+# Stage 2: Serve frontend with Nginx
+FROM nginx:1.25-alpine
 COPY --from=builder /app/build /usr/share/nginx/html
-
-USER 101
-EXPOSE 8080
+EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

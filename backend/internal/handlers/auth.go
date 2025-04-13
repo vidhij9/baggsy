@@ -116,7 +116,7 @@ func RegisterHandler(c *gin.Context) {
 	tx.Commit()
 
 	// Simulate sending verification email (replace with actual email service)
-	log.Printf("Verification link: https://baggsy.up.railway.app/verify/%s\n", verificationToken)
+	log.Printf("Verification link: https://baggsy-backend.up.railway.app/verify/%s\n", verificationToken)
 	c.JSON(http.StatusOK, gin.H{"message": "Account created. Check email for verification link."})
 }
 

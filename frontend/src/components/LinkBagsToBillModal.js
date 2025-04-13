@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 import { DocumentTextIcon } from '@heroicons/react/24/solid';
 import jsQR from 'jsqr';
 import debounce from 'lodash/debounce';
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = process.env.REACT_APP_API_URL;
 
 function LinkBagsToBillModal({ setError, closeModal, token, onSuccess }) {
   const [billID, setBillID] = useState('');
