@@ -1,0 +1,6 @@
+{
+  "appId": "com.baggsy.app",
+  "appName": "Baggsy",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}

@@ -4,3 +4,8 @@
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
+.env
+node_modules
+frontend/dist
+ios/
+android/
